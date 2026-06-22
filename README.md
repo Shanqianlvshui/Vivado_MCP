@@ -90,8 +90,9 @@ After connecting the MCP client, use this sequence:
 2. `vivado_check_installation`.
 3. `vivado_start_session` with `open_gui=true`.
 4. `vivado_run_tcl` with `tcl="return \"version=[version -short]\""`.
-5. `vivado_list_artifacts` to inspect command/result files.
-6. `vivado_stop_session`.
+5. `vivado_project_summary` after opening or creating a project.
+6. `vivado_list_artifacts` to inspect command/result files.
+7. `vivado_stop_session`.
 
 ## Implemented Tools
 
@@ -109,6 +110,7 @@ After connecting the MCP client, use this sequence:
 - `vivado_run_implementation`
 - `vivado_generate_bitstream`
 - `vivado_report`
+- `vivado_project_summary`
 - `vivado_list_artifacts`
 - `vivado_read_artifact`
 - `vivado_help`
@@ -133,7 +135,7 @@ Command files, result files, logs, and reports are stored under the managed sess
 vivado://sessions/{session_ref}/artifacts/{artifact_id}
 ```
 
-Use `vivado_list_artifacts` to discover artifact URIs and `vivado_read_artifact` to read text artifacts. `vivado_report` also returns a best-effort `report_summary` for timing, utilization, DRC, and message reports.
+Use `vivado_list_artifacts` to discover artifact URIs and `vivado_read_artifact` to read text artifacts. `vivado_report` also returns a best-effort `report_summary` for timing, utilization, DRC, and message reports. `vivado_project_summary` returns the current project, source files, runs, IP, and block designs as structured data.
 
 ## Explicitly out of scope for the first version
 

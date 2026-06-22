@@ -114,3 +114,42 @@ def report_tcl(report_type: str, output_path: Path) -> str:
         ]
     )
 
+
+def project_summary_tcl(output_path: Path) -> str:
+    out = quote_tcl(output_path)
+    out_string = str(output_path).replace("\\", "/")
+    return "\n".join(
+        [
+            f"set mcp_summary_file {out}",
+            "set f [open $mcp_summary_file w]",
+            "proc mcp_put {f args} { puts $f [join $args \"\\t\"] }",
+            "if {[catch {current_project} project] || $project eq \"\"} {",
+            "  mcp_put $f has_project 0",
+            "  close $f",
+            f"  return \"summary={out_string}\"",
+            "}",
+            "mcp_put $f has_project 1",
+            "mcp_put $f current_project $project",
+            "foreach {prop key} {FILE_NAME project_file PART part BOARD_PART board_part TOP top} {",
+            "  set value \"\"",
+            "  catch { set value [get_property $prop [current_project]] }",
+            "  if {$value ne \"\"} { mcp_put $f $key $value }",
+            "}",
+            "foreach file [get_files -quiet] {",
+            "  set file_type \"\"",
+            "  catch { set file_type [get_property FILE_TYPE $file] }",
+            "  mcp_put $f file $file $file_type",
+            "}",
+            "foreach run [get_runs -quiet] {",
+            "  set status \"\"",
+            "  set progress \"\"",
+            "  catch { set status [get_property STATUS $run] }",
+            "  catch { set progress [get_property PROGRESS $run] }",
+            "  mcp_put $f run $run $status $progress",
+            "}",
+            "foreach ip [get_ips -quiet] { mcp_put $f ip $ip }",
+            "foreach bd [get_files -quiet -filter {FILE_TYPE == \"Block Designs\"}] { mcp_put $f block_design $bd }",
+            "close $f",
+            f"return \"summary={out_string}\"",
+        ]
+    )

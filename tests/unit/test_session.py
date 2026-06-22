@@ -92,6 +92,24 @@ def test_report_writes_artifact(tmp_path: Path) -> None:
     manager.stop_session(session_ref, timeout_seconds=5)
 
 
+def test_project_summary_returns_structured_state(tmp_path: Path) -> None:
+    wrapper = _make_fake_wrapper(tmp_path)
+    manager = VivadoSessionManager(default_workspace=tmp_path)
+    started = manager.start_session(vivado_path=str(wrapper), open_gui=False)
+    session_ref = str(started["session_ref"])
+
+    result = manager.project_summary(session_ref=session_ref, timeout_seconds=5)
+    assert result["ok"] is True
+    assert result["summary_artifact_uri"].startswith(f"vivado://sessions/{session_ref}/artifacts/")
+    summary = result["project_summary"]
+    assert summary["current_project"] == "fake_project"
+    assert summary["files"][0]["file_type"] == "Verilog"
+    assert summary["runs"][0]["name"] == "synth_1"
+    assert summary["ips"] == ["fake_ip_0"]
+
+    manager.stop_session(session_ref, timeout_seconds=5)
+
+
 def _make_fake_wrapper(tmp_path: Path) -> Path:
     fake = Path(__file__).resolve().parents[1] / "fixtures" / "fake_vivado.py"
     wrapper = tmp_path / "vivado.bat"

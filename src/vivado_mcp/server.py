@@ -204,6 +204,12 @@ def vivado_report(
 
 
 @mcp.tool()
+def vivado_project_summary(session_ref: str, timeout_seconds: int = 60) -> dict[str, object]:
+    """Return structured information about the current Vivado project, files, runs, IP, and block designs."""
+    return manager.project_summary(session_ref=session_ref, timeout_seconds=timeout_seconds)
+
+
+@mcp.tool()
 def vivado_list_artifacts(session_ref: str) -> dict[str, object]:
     """List files produced in a managed session directory."""
     return manager.list_artifacts(session_ref)

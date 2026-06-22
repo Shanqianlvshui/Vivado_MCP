@@ -358,6 +358,22 @@ class VivadoSessionManager:
             result["report_summary"] = parse_report(report_type, report_text)
         return result
 
+    def project_summary(self, *, session_ref: str, timeout_seconds: int = 60) -> dict[str, object]:
+        from .project_summary import parse_project_summary
+        from .tcl import project_summary_tcl
+
+        running = self._get(session_ref)
+        summaries_dir = running.record.session_dir / "summaries"
+        summaries_dir.mkdir(parents=True, exist_ok=True)
+        output_path = summaries_dir / f"project_summary_{uuid.uuid4().hex[:8]}.tsv"
+        raw_result = self._submit_tcl(running, project_summary_tcl(output_path), timeout_seconds=timeout_seconds)
+        result = _result_to_dict(raw_result, expect_destructive=False)
+        result["summary_path"] = str(output_path)
+        result["summary_artifact_uri"] = artifact_uri(session_ref, output_path.relative_to(running.record.session_dir).as_posix())
+        if output_path.exists():
+            result["project_summary"] = parse_project_summary(output_path)
+        return result
+
     def _submit_tcl(self, running: "_RunningSession", tcl: str, *, timeout_seconds: int) -> TclCommandResult:
         if running.process.poll() is not None:
             raise VivadoSessionError(f"Vivado session is stopped with code {running.process.returncode}")

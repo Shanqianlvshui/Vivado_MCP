@@ -70,6 +70,29 @@ def _result_for(body: str) -> str:
         return "project_opened=fake"
     if "launch_runs" in body:
         return "status=complete"
+    summary_match = re.search(r"set mcp_summary_file \{([^}]+)\}", body)
+    if summary_match:
+        path = Path(summary_match.group(1))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "\n".join(
+                [
+                    "has_project\t1",
+                    "current_project\tfake_project",
+                    "project_file\tC:/fake/fake_project.xpr",
+                    "part\txc7a35tcpg236-1",
+                    "top\ttop",
+                    "file\tC:/fake/top.v\tVerilog",
+                    "run\tsynth_1\tsynth_design Complete!\t100%",
+                    "run\timpl_1\tNot started\t0%",
+                    "ip\tfake_ip_0",
+                    "block_design\tC:/fake/design_1.bd",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        return f"summary={path}"
     report_match = re.search(r"-file \{([^}]+)\}", body)
     if report_match:
         path = Path(report_match.group(1))
