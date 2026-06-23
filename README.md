@@ -31,6 +31,7 @@ Current design documents:
 - Run basic Non-project Mode flows: read RTL/XDC, execute synth/opt/place/route, write checkpoints, and collect reports.
 - Generate timing, utilization, DRC, methodology, power, and message reports.
 - Parse common report outputs into compact structured summaries and aggregate report diagnostics with next-step guidance.
+- Perform explicit, read-only hardware discovery for hw_server targets/devices; hardware programming remains out of scope.
 - Capture JSON state snapshots and diff project/fileset/constraint/BD state before and after risky or long-running operations.
 - Expose logs and generated reports as MCP resources.
 - Provide built-in help/skills so AI clients can learn the intended Vivado workflows before acting.
@@ -121,12 +122,13 @@ AI clients should use the MCP in this order:
 8. For IP work, call `vivado_ip_catalog_search`, then use `vivado_create_ip`, `vivado_describe_ip`, and `vivado_generate_ip_outputs`; use `vivado_upgrade_ip(expect_upgrade=true)` only when the `.xci` mutation is intended.
 9. For simulation work, call `vivado_prepare_simulation`, `vivado_launch_simulation`, and `vivado_analyze_xsim_logs`; search UG900/UG835 when custom simulation Tcl is needed.
 10. For Non-project Mode work, call `vivado_nonproject_read_sources`, then run `vivado_nonproject_synth_design`, `vivado_nonproject_opt_design`, `vivado_nonproject_place_design`, and `vivado_nonproject_route_design` as needed.
-11. Call `vivado_tcl_command_help(command=...)` before unfamiliar Tcl commands; it combines official search, MCP tool coverage, and optional installed Vivado help.
-12. Call `vivado_review_tcl(tcl=...)` before expert-mode execution.
-13. Use `vivado_run_tcl` or `vivado_source_tcl` only for commands that are not yet modeled as workflow tools; set `expect_destructive=true` when the review requires it.
-14. For risky or long-running changes, call `vivado_capture_state` before/after and `vivado_state_diff`, or pass `capture_diff=true` to supported mutating tools.
-15. After every mutating action, call `vivado_project_summary`, `vivado_bd_summary`, `vivado_analyze_reports`, or `vivado_list_artifacts` to inspect the resulting state.
-16. Call `vivado_focus_gui` only when the user explicitly wants Vivado brought to the foreground.
+11. For hardware discovery, call `vivado_hw_discover(expect_hardware_access=true)` only for read-only hw_server/target/device enumeration; programming remains expert Tcl after review.
+12. Call `vivado_tcl_command_help(command=...)` before unfamiliar Tcl commands; it combines official search, MCP tool coverage, and optional installed Vivado help.
+13. Call `vivado_review_tcl(tcl=...)` before expert-mode execution.
+14. Use `vivado_run_tcl` or `vivado_source_tcl` only for commands that are not yet modeled as workflow tools; set `expect_destructive=true` when the review requires it.
+15. For risky or long-running changes, call `vivado_capture_state` before/after and `vivado_state_diff`, or pass `capture_diff=true` to supported mutating tools.
+16. After every mutating action, call `vivado_project_summary`, `vivado_bd_summary`, `vivado_analyze_reports`, or `vivado_list_artifacts` to inspect the resulting state.
+17. Call `vivado_focus_gui` only when the user explicitly wants Vivado brought to the foreground.
 
 ## First Manual Test
 
@@ -196,6 +198,7 @@ After connecting the MCP client, use this sequence:
 - `vivado_generate_bitstream`
 - `vivado_report`
 - `vivado_analyze_reports`
+- `vivado_hw_discover`
 - `vivado_project_summary`
 - `vivado_list_artifacts`
 - `vivado_read_artifact`
@@ -229,7 +232,7 @@ Command files, result files, logs, and reports are stored under the managed sess
 vivado://sessions/{session_ref}/artifacts/{artifact_id}
 ```
 
-Use `vivado_list_artifacts` to discover artifact URIs and `vivado_read_artifact` to read text artifacts. `vivado_report` also returns a best-effort `report_summary` for timing, utilization, DRC, methodology, power, and message reports. `vivado_analyze_reports` generates selected reports, ranks timing/utilization/DRC/power/methodology issues, and writes a JSON analysis artifact. `vivado_list_ips` and `vivado_describe_ip` return structured project IP state. `vivado_launch_simulation` returns simulation log artifact paths when Vivado reports them, and `vivado_analyze_xsim_logs` writes a JSON diagnostic artifact. Non-project step tools write checkpoints under session artifacts and parse requested reports. `vivado_project_summary` returns the current project, source files, runs, IP, and block designs as structured data.
+Use `vivado_list_artifacts` to discover artifact URIs and `vivado_read_artifact` to read text artifacts. `vivado_report` also returns a best-effort `report_summary` for timing, utilization, DRC, methodology, power, and message reports. `vivado_analyze_reports` generates selected reports, ranks timing/utilization/DRC/power/methodology issues, and writes a JSON analysis artifact. `vivado_list_ips` and `vivado_describe_ip` return structured project IP state. `vivado_launch_simulation` returns simulation log artifact paths when Vivado reports them, and `vivado_analyze_xsim_logs` writes a JSON diagnostic artifact. Non-project step tools write checkpoints under session artifacts and parse requested reports. `vivado_hw_discover` returns structured read-only hardware target/device summaries and a TSV artifact. `vivado_project_summary` returns the current project, source files, runs, IP, and block designs as structured data.
 
 `vivado_capture_state` writes a JSON snapshot of project, fileset, constraint, and optional block-design state. `vivado_state_diff` compares two snapshot artifacts. Supported mutating tools, including expert Tcl, source/fileset/property/top operations, BD apply/generate, and run launch helpers, accept `capture_diff=true` to return before/after snapshot artifact URIs plus a diff artifact.
 
@@ -257,5 +260,5 @@ The MCP also includes the AMD/Xilinx PDF download workflow from the `download-xi
 
 - GUI click automation.
 - Attaching to an arbitrary already-open Vivado process that did not load the MCP bridge.
-- Hardware programming and live hardware manager operations.
+- Hardware programming, configuration-memory writes, boot operations, and debug/probe mutation. Read-only hardware discovery is supported with explicit confirmation.
 - Advanced IP Integrator automation beyond the generic BD action model.

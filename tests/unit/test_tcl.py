@@ -9,6 +9,7 @@ from vivado_mcp.tcl import (
     constraint_set_apply_tcl,
     create_project_tcl,
     fileset_apply_tcl,
+    hardware_discover_tcl,
     ip_catalog_search_tcl,
     ip_create_tcl,
     ip_describe_tcl,
@@ -229,3 +230,24 @@ def test_nonproject_tcl_helpers_read_sources_and_run_steps() -> None:
             step="opt_design",
             extra_args={"bad;exec": "calc"},
         )
+
+
+def test_hardware_discover_tcl_is_read_only() -> None:
+    script = hardware_discover_tcl(
+        Path("hardware.tsv"),
+        hw_server_url="localhost:3121",
+        target="*Digilent*",
+        open_target=True,
+        refresh=True,
+    )
+
+    assert "open_hw_manager" in script
+    assert "connect_hw_server -url {localhost:3121}" in script
+    assert "open_hw_target $hw_target" in script
+    assert "refresh_hw_device $device" in script
+    assert "get_hw_targets_failed" in script
+    assert "get_hw_devices_failed" in script
+    assert "get_hw_devices -quiet" in script
+    assert "program_hw_devices" not in script
+    assert "write_cfgmem" not in script
+    assert "boot_hw_device" not in script

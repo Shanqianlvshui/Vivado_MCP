@@ -491,6 +491,99 @@ def report_tcl(report_type: str, output_path: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Hardware read-only helpers
+# ---------------------------------------------------------------------------
+
+
+def hardware_discover_tcl(
+    output_path: Path,
+    *,
+    hw_server_url: str | None = None,
+    target: str | None = None,
+    open_target: bool = True,
+    refresh: bool = False,
+) -> str:
+    out = quote_tcl(output_path)
+    out_string = str(output_path).replace("\\", "/")
+    server_arg = f" -url {quote_tcl(hw_server_url)}" if hw_server_url else ""
+    target_filter = target or ""
+    lines = [
+        f"set mcp_hw_file {out}",
+        "set f [open $mcp_hw_file w]",
+        "proc mcp_put {f args} { puts $f [join $args \"\\t\"] }",
+        "catch { open_hw_manager } mcp_open_hw_manager_result",
+        f"set mcp_connect_code [catch {{ connect_hw_server{server_arg} }} mcp_connect_result]",
+        "if {$mcp_connect_code != 0} {",
+        "  mcp_put $f warning connect_hw_server_failed $mcp_connect_result",
+        "} else {",
+        "  mcp_put $f server [expr {$mcp_connect_result eq \"\" ? \"default\" : $mcp_connect_result}] connected",
+        "}",
+        f"set mcp_target_filter {quote_tcl(target_filter)}",
+        "set mcp_targets {}",
+        "if {[catch { get_hw_targets -quiet } mcp_get_targets_result]} {",
+        "  mcp_put $f warning get_hw_targets_failed $mcp_get_targets_result",
+        "} else {",
+        "  set mcp_targets $mcp_get_targets_result",
+        "}",
+        "if {[llength $mcp_targets] == 0} { mcp_put $f warning no_hw_targets }",
+        "foreach hw_target $mcp_targets {",
+        "  set mcp_target_name $hw_target",
+        "  catch { set mcp_target_name [get_property NAME $hw_target] }",
+        "  set mcp_target_status \"\"",
+        "  catch { set mcp_target_status [get_property STATUS $hw_target] }",
+        "  if {$mcp_target_filter ne \"\" && ![string match -nocase $mcp_target_filter $mcp_target_name]} { continue }",
+        "  mcp_put $f target $mcp_target_name $mcp_target_status",
+    ]
+    if open_target:
+        lines.extend(
+            [
+                "  set mcp_open_target_code [catch { open_hw_target $hw_target } mcp_open_target_result]",
+                "  if {$mcp_open_target_code != 0} { mcp_put $f warning open_hw_target_failed $mcp_target_name $mcp_open_target_result }",
+            ]
+        )
+    lines.extend(
+        [
+            "}",
+            "set mcp_devices {}",
+            "if {[catch { get_hw_devices -quiet } mcp_get_devices_result]} {",
+            "  mcp_put $f warning get_hw_devices_failed $mcp_get_devices_result",
+            "} else {",
+            "  set mcp_devices $mcp_get_devices_result",
+            "}",
+            "if {[llength $mcp_devices] == 0} { mcp_put $f warning no_hw_devices }",
+            "foreach device $mcp_devices {",
+        ]
+    )
+    if refresh:
+        lines.append("  catch { refresh_hw_device $device } mcp_refresh_result")
+    lines.extend(
+        [
+            "  set mcp_name $device",
+            "  catch { set mcp_name [get_property NAME $device] }",
+            "  set mcp_part \"\"",
+            "  set mcp_dna \"\"",
+            "  set mcp_programmed 0",
+            "  set mcp_status \"\"",
+            "  catch { set mcp_part [get_property PART $device] }",
+            "  catch { set mcp_dna [get_property REGISTER.EFUSE.FUSE_DNA $device] }",
+            "  catch { set mcp_programmed [get_property PROGRAM.IS_PROGRAMMED $device] }",
+            "  catch { set mcp_status [get_property STATUS $device] }",
+            "  mcp_put $f device $mcp_name $mcp_part $mcp_dna $mcp_programmed $mcp_status",
+            "  foreach prop {NAME PART PROGRAM.IS_PROGRAMMED STATUS REGISTER.EFUSE.FUSE_DNA} {",
+            "    set mcp_prop_value \"\"",
+            "    if {![catch { set mcp_prop_value [get_property $prop $device] }]} {",
+            "      mcp_put $f property $mcp_name $prop $mcp_prop_value",
+            "    }",
+            "  }",
+            "}",
+            "close $f",
+            f"return \"hardware={out_string}\"",
+        ]
+    )
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Non-project helpers
 # ---------------------------------------------------------------------------
 

@@ -49,6 +49,10 @@ def test_help_topic_points_to_skill() -> None:
     assert "vivado_nonproject_synth_design" in nonproject_help["recommended_tools"]
     assert "vivado_nonproject_route_design" in nonproject_help["recommended_tools"]
 
+    hw_help = help_topic("hardware")
+    assert "vivado_hw_discover" in hw_help["recommended_tools"]
+    assert "vivado_search_official_docs" in hw_help["recommended_tools"]
+
     docs_help = help_topic("official_docs")
     assert "vivado_list_official_references" in docs_help["recommended_tools"]
     assert "vivado_search_official_docs" in docs_help["recommended_tools"]
@@ -119,6 +123,23 @@ def test_suggest_next_steps_routes_nonproject_work() -> None:
 
     assert tools[:2] == ["vivado_nonproject_read_sources", "vivado_nonproject_synth_design"]
     assert "vivado_nonproject_route_design" in tools
+
+
+def test_suggest_next_steps_routes_hardware_readonly_work() -> None:
+    result = suggest_next_steps(goal="connect_hw_server and get_hw_devices", has_session=True, has_project=False)
+    tools = [row["tool"] for row in result["recommendations"]]
+
+    assert tools[0] == "vivado_hw_discover"
+    assert "vivado_review_tcl" in tools
+    assert "vivado_search_official_docs" in tools
+
+
+def test_suggest_next_steps_routes_hardware_programming_to_review() -> None:
+    result = suggest_next_steps(goal="program_hw_devices with a bitstream", has_session=True, has_project=True)
+    tools = [row["tool"] for row in result["recommendations"]]
+
+    assert tools[0] == "vivado_review_tcl"
+    assert "vivado_hw_discover" in tools
 
 
 def test_skills_index_contains_resource_uris() -> None:

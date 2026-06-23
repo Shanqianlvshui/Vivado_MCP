@@ -184,6 +184,18 @@ def help_topic(topic: str | None = None) -> dict[str, object]:
             ],
             "related_resources": ["vivado://skills/project-build-flow", "vivado://official-docs/index"],
         }
+    if normalized in {"hardware", "hw", "hw-manager", "hardware-manager", "hw-server", "device", "devices"}:
+        return {
+            "topic": "hardware_discovery",
+            "summary": "Use read-only hardware discovery to connect to hw_server, enumerate hardware targets/devices, and capture summary artifacts. Device programming is not covered by a structured tool.",
+            "recommended_tools": [
+                "vivado_hw_discover",
+                "vivado_review_tcl",
+                "vivado_tcl_command_help",
+                "vivado_search_official_docs",
+            ],
+            "related_resources": ["vivado://official-docs/index", "vivado://skills/raw-tcl-expert"],
+        }
     if normalized in {
         "fileset",
         "filesets",
@@ -354,6 +366,45 @@ def suggest_next_steps(
                 {"tool": "vivado_search_official_docs", "why": "Use UG892/UG894/UG901/UG904/UG906 guidance for Non-project Mode scripts and reports."},
             ],
             "related_resources": ["vivado://skills/project-build-flow", "vivado://official-docs/index"],
+        }
+    if any(
+        word in text
+        for word in (
+            "hardware",
+            "hw_server",
+            "hw server",
+            "open_hw_manager",
+            "connect_hw_server",
+            "open_hw_target",
+            "refresh_hw_device",
+            "get_hw_devices",
+            "get_hw_targets",
+            "program_hw_devices",
+            "write_cfgmem",
+            "boot_hw_device",
+            "device programming",
+            "ila",
+            "vio",
+        )
+    ):
+        programming = any(word in text for word in ("program_hw_devices", "write_cfgmem", "boot_hw_device", "device programming"))
+        if programming:
+            recommendations = [
+                {"tool": "vivado_review_tcl", "why": "Review programming or boot Tcl before any expert execution; these operations require expect_destructive=true."},
+                {"tool": "vivado_search_official_docs", "why": "Use UG908/UG835 for hardware programming syntax, sequence, and risk checks."},
+                {"tool": "vivado_tcl_command_help", "why": "Check command coverage and installed Vivado help for the exact hardware command."},
+                {"tool": "vivado_hw_discover", "why": "Use only for read-only target/device discovery before deciding whether expert Tcl is needed."},
+            ]
+        else:
+            recommendations = [
+                {"tool": "vivado_hw_discover", "why": "Connect to hw_server and list targets/devices through the read-only structured tool with expect_hardware_access=true."},
+                {"tool": "vivado_review_tcl", "why": "Review any custom Hardware Manager Tcl before expert execution."},
+                {"tool": "vivado_tcl_command_help", "why": "Check coverage, current Vivado help, and official-doc routing for hardware Tcl commands."},
+                {"tool": "vivado_search_official_docs", "why": "Use UG908/UG835 when discovery requires custom target or debug Tcl."},
+            ]
+        return {
+            "recommendations": recommendations,
+            "related_resources": ["vivado://official-docs/index", "vivado://skills/raw-tcl-expert"],
         }
     if any(
         word in text

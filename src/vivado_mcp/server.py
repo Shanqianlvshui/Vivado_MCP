@@ -600,6 +600,28 @@ def vivado_analyze_reports(
 
 
 @mcp.tool()
+def vivado_hw_discover(
+    session_ref: str,
+    expect_hardware_access: bool = False,
+    hw_server_url: str | None = None,
+    target: str | None = None,
+    open_target: bool = True,
+    refresh: bool = False,
+    timeout_seconds: int = 120,
+) -> dict[str, object]:
+    """Read-only hardware discovery. Opens/connects Hardware Manager and lists targets/devices; does not program devices."""
+    return manager.hardware_discover(
+        session_ref=session_ref,
+        expect_hardware_access=expect_hardware_access,
+        hw_server_url=hw_server_url,
+        target=target,
+        open_target=open_target,
+        refresh=refresh,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+@mcp.tool()
 def vivado_nonproject_read_sources(
     session_ref: str,
     verilog: list[str] | None = None,

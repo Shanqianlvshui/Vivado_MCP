@@ -111,6 +111,19 @@ def test_command_coverage_for_priority_cross_flow_commands() -> None:
     generate_target = tcl_command_coverage("generate_target")
     assert "vivado_generate_ip_outputs" in generate_target["recommended_tools"]
 
+    open_hw = tcl_command_coverage("open_hw_manager")
+    assert open_hw["coverage_status"] == "covered"
+    assert open_hw["recommended_tools"] == ["vivado_hw_discover"]
+    assert tcl_command_doc_topic("get_hw_devices") == "hardware"
+
+    refresh_hw = tcl_command_coverage("refresh_hw_device")
+    assert refresh_hw["coverage_status"] == "partial"
+    assert refresh_hw["recommended_tools"] == ["vivado_hw_discover", "vivado_review_tcl"]
+
+    program = tcl_command_coverage("program_hw_devices")
+    assert program["coverage_status"] == "raw_tcl"
+    assert "vivado_review_tcl" in program["recommended_tools"]
+
 
 def test_build_tcl_command_help_combines_docs_vivado_and_coverage() -> None:
     result = build_tcl_command_help(

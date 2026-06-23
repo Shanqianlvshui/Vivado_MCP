@@ -173,6 +173,33 @@ def test_nonproject_workflow_reads_sources_and_runs_steps(tmp_path: Path) -> Non
     manager.stop_session(session_ref, timeout_seconds=5)
 
 
+def test_hardware_discovery_requires_confirmation_and_returns_devices(tmp_path: Path) -> None:
+    wrapper = _make_fake_wrapper(tmp_path)
+    manager = VivadoSessionManager(default_workspace=tmp_path)
+    started = manager.start_session(vivado_path=str(wrapper), open_gui=False)
+    session_ref = str(started["session_ref"])
+
+    with pytest.raises(PermissionError):
+        manager.hardware_discover(session_ref=session_ref, timeout_seconds=5)
+
+    discovered = manager.hardware_discover(
+        session_ref=session_ref,
+        expect_hardware_access=True,
+        hw_server_url="localhost:3121",
+        target="*Digilent*",
+        refresh=True,
+        timeout_seconds=5,
+    )
+
+    assert discovered["ok"] is True
+    assert discovered["expect_hardware_access"] is True
+    assert discovered["hardware"]["server_count"] == 1
+    assert discovered["hardware"]["devices"][0]["part"] == "xc7a35tcpg236-1"
+    assert discovered["hardware"]["devices"][0]["programmed"] is True
+
+    manager.stop_session(session_ref, timeout_seconds=5)
+
+
 def test_project_summary_returns_structured_state(tmp_path: Path) -> None:
     wrapper = _make_fake_wrapper(tmp_path)
     manager = VivadoSessionManager(default_workspace=tmp_path)

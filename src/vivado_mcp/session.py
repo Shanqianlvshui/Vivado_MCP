@@ -1067,6 +1067,45 @@ class VivadoSessionManager:
             "analysis_artifact_uri": artifact_uri(session_ref, output_path.relative_to(running.record.session_dir).as_posix()),
         }
 
+    def hardware_discover(
+        self,
+        *,
+        session_ref: str,
+        expect_hardware_access: bool = False,
+        hw_server_url: str | None = None,
+        target: str | None = None,
+        open_target: bool = True,
+        refresh: bool = False,
+        timeout_seconds: int = 120,
+    ) -> dict[str, object]:
+        from .hardware_summary import parse_hardware_summary
+        from .tcl import hardware_discover_tcl
+
+        if not expect_hardware_access:
+            raise PermissionError("Hardware discovery touches hw_server/target state; pass expect_hardware_access=true")
+        running = self._get(session_ref)
+        summaries_dir = running.record.session_dir / "summaries"
+        summaries_dir.mkdir(parents=True, exist_ok=True)
+        output_path = summaries_dir / f"hardware_{uuid.uuid4().hex[:8]}.tsv"
+        raw_result = self._submit_tcl(
+            running,
+            hardware_discover_tcl(
+                output_path,
+                hw_server_url=hw_server_url,
+                target=target,
+                open_target=open_target,
+                refresh=refresh,
+            ),
+            timeout_seconds=timeout_seconds,
+        )
+        result = _result_to_dict(raw_result, expect_destructive=False)
+        result["expect_hardware_access"] = expect_hardware_access
+        result["summary_path"] = str(output_path)
+        result["summary_artifact_uri"] = artifact_uri(session_ref, output_path.relative_to(running.record.session_dir).as_posix())
+        if output_path.exists():
+            result["hardware"] = parse_hardware_summary(output_path)
+        return result
+
     def nonproject_read_sources(
         self,
         *,

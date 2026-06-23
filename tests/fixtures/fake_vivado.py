@@ -133,6 +133,23 @@ def _result_for(body: str) -> str:
         return f"simulation_launch={path}"
     if "simulation_prepared=" in body or "create_fileset -type {simulation}" in body:
         return "simulation_prepared=sim_1"
+    hardware_match = re.search(r"set mcp_hw_file \{([^}]+)\}", body)
+    if hardware_match:
+        path = Path(hardware_match.group(1))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "\n".join(
+                [
+                    "server\tlocalhost:3121\tconnected",
+                    "target\txilinx_tcf/Digilent/123\topen",
+                    "device\txc7a35t_0\txc7a35tcpg236-1\t0123456789abcdef\t1\tReady",
+                    "property\txc7a35t_0\tPROGRAM.IS_PROGRAMMED\t1",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        return f"hardware={path}"
     nonproject_read_match = re.search(r"set mcp_nonproject_file \{([^}]+)\}", body)
     if nonproject_read_match:
         path = Path(nonproject_read_match.group(1))
