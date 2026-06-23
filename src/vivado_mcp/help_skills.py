@@ -160,8 +160,9 @@ def help_topic(topic: str | None = None) -> dict[str, object]:
     if normalized in {"simulation", "sim", "xsim", "launch-simulation", "testbench", "testbench-fileset"}:
         return {
             "topic": "simulation_flow",
-            "summary": "Prepare simulation filesets, launch Vivado simulation, and parse xsim/xelab/xvlog logs for actionable compile/elaboration/runtime diagnostics.",
+            "summary": "Audit simulation setup, dry-run/prepare filesets, launch Vivado simulation, and parse xsim/xelab/xvlog logs for actionable diagnostics.",
             "recommended_tools": [
+                "vivado_simulation_audit",
                 "vivado_prepare_simulation",
                 "vivado_launch_simulation",
                 "vivado_analyze_xsim_logs",
@@ -335,9 +336,10 @@ def suggest_next_steps(
     ):
         return {
             "recommendations": [
-                {"tool": "vivado_prepare_simulation", "why": "Create or update the simulation fileset with testbench files, top, include directories, defines, and library."},
+                {"tool": "vivado_simulation_audit", "why": "Audit simulation fileset, testbench, top, and IP output-product state before launch."},
+                {"tool": "vivado_prepare_simulation", "why": "Dry-run or update the simulation fileset with testbench files, top, include directories, defines, and library."},
                 {"tool": "vivado_launch_simulation", "why": "Launch Vivado simulation and collect structured log paths for xsim/xelab/xvlog/xvhdl outputs."},
-                {"tool": "vivado_analyze_xsim_logs", "why": "Parse simulation logs into severity counts, categories, and first actionable diagnostics."},
+                {"tool": "vivado_analyze_xsim_logs", "why": "Parse simulation logs into issue IDs, severity counts, official-doc queries, and first actionable diagnostics."},
                 {"tool": "vivado_describe_fileset", "why": "Inspect the simulation fileset when compile order, library, or top selection looks wrong."},
                 {"tool": "vivado_search_official_docs", "why": "Use UG900/UG835/UG896 guidance for simulation modes, scripts, and IP simulation models."},
             ],

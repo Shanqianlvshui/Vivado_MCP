@@ -243,9 +243,9 @@ COMMAND_COVERAGE: dict[str, dict[str, object]] = {
     },
     "launch_simulation": {
         "coverage_status": "covered",
-        "recommended_tools": ["vivado_prepare_simulation", "vivado_launch_simulation", "vivado_analyze_xsim_logs"],
+        "recommended_tools": ["vivado_simulation_audit", "vivado_prepare_simulation", "vivado_launch_simulation", "vivado_analyze_xsim_logs"],
         "recommendation": "prefer_structured_tool",
-        "notes": "Use structured simulation tools so the simulation fileset, mode, generated logs, and parsed diagnostics are captured.",
+        "notes": "Audit setup first, then use structured simulation tools so the simulation fileset, mode, generated logs, and parsed diagnostics are captured.",
     },
     "open_hw_manager": {
         "coverage_status": "covered",

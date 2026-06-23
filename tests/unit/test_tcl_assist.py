@@ -77,6 +77,7 @@ def test_command_coverage_for_priority_cross_flow_commands() -> None:
     launch_simulation = tcl_command_coverage("launch_simulation")
     assert launch_simulation["coverage_status"] == "covered"
     assert launch_simulation["recommended_tools"] == [
+        "vivado_simulation_audit",
         "vivado_prepare_simulation",
         "vivado_launch_simulation",
         "vivado_analyze_xsim_logs",

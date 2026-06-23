@@ -745,8 +745,9 @@ def vivado_prepare_simulation(
     create_if_missing: bool = True,
     timeout_seconds: int = 120,
     capture_diff: bool = False,
+    dry_run: bool = False,
 ) -> dict[str, object]:
-    """Create/update a simulation fileset with testbench files, top, includes, defines, and library."""
+    """Create/update a simulation fileset with testbench files, top, includes, defines, and library, or return a dry-run plan."""
     return manager.prepare_simulation(
         session_ref=session_ref,
         fileset=fileset,
@@ -758,7 +759,19 @@ def vivado_prepare_simulation(
         create_if_missing=create_if_missing,
         timeout_seconds=timeout_seconds,
         capture_diff=capture_diff,
+        dry_run=dry_run,
     )
+
+
+@mcp.tool()
+def vivado_simulation_audit(
+    session_ref: str,
+    fileset: str = "sim_1",
+    top: str | None = None,
+    timeout_seconds: int = 120,
+) -> dict[str, object]:
+    """Audit simulation fileset, testbench, top, and IP output-product state before launch."""
+    return manager.simulation_audit(session_ref=session_ref, fileset=fileset, top=top, timeout_seconds=timeout_seconds)
 
 
 @mcp.tool()

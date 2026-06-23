@@ -61,7 +61,72 @@ def analyze_xsim_logs(paths: list[Path]) -> dict[str, object]:
         "counts": aggregate,
         "logs": logs,
         "issues": issues,
-        "suggested_next_tools": ["vivado_prepare_simulation", "vivado_launch_simulation", "vivado_search_official_docs"],
+        "suggested_next_tools": [
+            "vivado_simulation_audit",
+            "vivado_prepare_simulation",
+            "vivado_launch_simulation",
+            "vivado_search_official_docs",
+        ],
+        "official_doc_queries": _official_doc_queries(issues),
+    }
+
+
+def analyze_simulation_audit(
+    *,
+    filesets: dict[str, object],
+    ip: dict[str, object] | None = None,
+    fileset: str = "sim_1",
+    top: str | None = None,
+) -> dict[str, object]:
+    described = _list_dicts(filesets.get("filesets"))
+    selected = next((row for row in described if str(row.get("name") or "") == fileset), None)
+    issues: list[dict[str, object]] = []
+    if selected is None:
+        issues.append({"issue_id": "sim.fileset_missing", "severity": "high", "fileset": fileset})
+    else:
+        sim_top = str(selected.get("top") or "")
+        expected_top = str(top or "")
+        if not sim_top:
+            issues.append({"issue_id": "sim.top_not_set", "severity": "high", "fileset": fileset, "expected_top": expected_top})
+        elif expected_top and sim_top != expected_top:
+            issues.append({"issue_id": "sim.top_mismatch", "severity": "high", "fileset": fileset, "top": sim_top, "expected_top": expected_top})
+
+        files = _list_dicts(selected.get("files"))
+        tb_files = [row for row in files if _looks_testbench(row)]
+        if not tb_files:
+            issues.append({"issue_id": "sim.testbench_missing", "severity": "high", "fileset": fileset})
+
+        disabled = [row for row in tb_files if row.get("is_enabled_simulation") is False]
+        if disabled:
+            issues.append({"issue_id": "sim.testbench_disabled", "severity": "high", "fileset": fileset, "files": disabled})
+
+    ip_rows = _list_dicts((ip or {}).get("ips"))
+    stale_ip = [row for row in ip_rows if row.get("generated") is False]
+    upgrade_ip = [row for row in ip_rows if row.get("upgrade_available") is True]
+    if stale_ip:
+        issues.append({"issue_id": "sim.ip_outputs_not_generated", "severity": "medium", "ips": stale_ip})
+    if upgrade_ip:
+        issues.append({"issue_id": "sim.ip_upgrade_available", "severity": "medium", "ips": upgrade_ip})
+
+    return {
+        "ok": not issues,
+        "fileset": fileset,
+        "summary": {
+            "fileset_found": selected is not None,
+            "top": str(selected.get("top") or "") if selected else "",
+            "ip_count": len(ip_rows),
+            "issue_count": len(issues),
+        },
+        "issues": issues,
+        "recommendations": _simulation_audit_recommendations(issues),
+        "suggested_next_tools": [
+            "vivado_prepare_simulation",
+            "vivado_describe_fileset",
+            "vivado_ip_upgrade_check",
+            "vivado_generate_ip_outputs",
+            "vivado_launch_simulation",
+            "vivado_analyze_xsim_logs",
+        ],
     }
 
 
@@ -77,6 +142,7 @@ def _analyze_one_log(path: Path, text: str) -> dict[str, object]:
         if severity == "info":
             continue
         issue = {
+            "issue_id": _issue_id_for_message(line),
             "severity": severity,
             "path": str(path),
             "line": index,
@@ -131,6 +197,69 @@ def _classify_message(line: str) -> str:
     if any(term in lowered for term in ("xvlog", "xvhdl", "compile")):
         return "compile"
     return "general"
+
+
+def _issue_id_for_message(line: str) -> str:
+    lowered = line.lower()
+    if any(term in lowered for term in ("include file", "`include", "cannot open include")):
+        return "sim.include_file_missing"
+    if any(term in lowered for term in ("ip simulation model", "compile_simlib", "ip static simulation", "simulation model is missing")):
+        return "sim.ip_model_missing"
+    if any(term in lowered for term in ("timescale", "timeunit", "timeprecision")):
+        return "sim.timescale_missing"
+    if any(term in lowered for term in ("unknown module", "module not found")) or re.search(r"\bmodule\b.*\bnot found\b", lowered):
+        return "sim.module_not_found"
+    if any(term in lowered for term in ("unresolved", "undefined")):
+        return "sim.unresolved_design_unit"
+    if any(term in lowered for term in ("elaborat", "xelab", "static elaboration")):
+        return "sim.elaboration_failed"
+    if any(term in lowered for term in ("xvlog", "xvhdl", "syntax error", "parse error")):
+        return "sim.compile_failed"
+    if "fatal" in lowered or "simulation aborted" in lowered:
+        return "sim.runtime_failed"
+    return "sim.log_issue"
+
+
+def _official_doc_queries(issues: list[dict[str, object]]) -> list[dict[str, str]]:
+    queries: list[dict[str, str]] = []
+    issue_ids = {str(issue.get("issue_id") or "") for issue in issues}
+    if issue_ids:
+        queries.append({"topic": "simulation", "doc_id": "UG900", "query": "launch_simulation xelab xsim simulation troubleshooting"})
+    if {"sim.ip_model_missing", "sim.ip_outputs_not_generated"} & issue_ids:
+        queries.append({"topic": "ip", "doc_id": "UG896", "query": "IP simulation models generate output products"})
+    if {"sim.include_file_missing", "sim.module_not_found", "sim.unresolved_design_unit"} & issue_ids:
+        queries.append({"topic": "simulation", "doc_id": "UG900", "query": "simulation fileset include directories libraries top module"})
+    return queries
+
+
+def _simulation_audit_recommendations(issues: list[dict[str, object]]) -> list[dict[str, str]]:
+    if not issues:
+        return [{"tool": "vivado_launch_simulation", "why": "Simulation fileset audit did not find blocking setup issues."}]
+    recommendations: list[dict[str, str]] = []
+
+    def add(tool: str, why: str) -> None:
+        if not any(row["tool"] == tool for row in recommendations):
+            recommendations.append({"tool": tool, "why": why})
+
+    issue_ids = {str(issue.get("issue_id") or "") for issue in issues}
+    if {"sim.fileset_missing", "sim.top_not_set", "sim.top_mismatch", "sim.testbench_missing", "sim.testbench_disabled"} & issue_ids:
+        add("vivado_prepare_simulation", "Create or repair the simulation fileset, top, testbench files, include dirs, defines, and library.")
+        add("vivado_describe_fileset", "Inspect simulation fileset files, top, properties, and USED_IN simulation flags.")
+    if {"sim.ip_outputs_not_generated", "sim.ip_upgrade_available"} & issue_ids:
+        add("vivado_ip_upgrade_check", "Inspect IP lock, upgrade, and output-generation state before simulation.")
+        add("vivado_generate_ip_outputs", "Generate IP simulation/output products when generated state is stale.")
+    add("vivado_search_official_docs", "Use UG900 and UG896 when simulation setup or IP simulation model state is unclear.")
+    return recommendations
+
+
+def _looks_testbench(row: dict[str, object]) -> bool:
+    path = str(row.get("path") or "").lower()
+    file_type = str(row.get("file_type") or "").lower()
+    return any(term in path for term in ("tb", "testbench")) or "simulation" in file_type
+
+
+def _list_dicts(value: object) -> list[dict[str, object]]:
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
 
 
 def _message_code(line: str) -> str:

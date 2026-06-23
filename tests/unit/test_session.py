@@ -334,6 +334,23 @@ def test_simulation_workflow_prepares_launches_and_analyzes_logs(tmp_path: Path)
     started = manager.start_session(vivado_path=str(wrapper), open_gui=False)
     session_ref = str(started["session_ref"])
 
+    audit_before = manager.simulation_audit(session_ref=session_ref, fileset="sim_1", top="tb_top", timeout_seconds=5)
+    assert audit_before["ok"] is False
+    assert "sim.ip_upgrade_available" in {issue["issue_id"] for issue in audit_before["issues"]}
+
+    dry_prepared = manager.prepare_simulation(
+        session_ref=session_ref,
+        fileset="sim_1",
+        testbench_files=[str(tb)],
+        top="tb_top",
+        defines=["SIM=1"],
+        timeout_seconds=5,
+        dry_run=True,
+    )
+    assert dry_prepared["dry_run"] is True
+    assert "add_testbench_files" in {action["action"] for action in dry_prepared["plan"]["actions"]}
+    assert "simulation_prepared" in dry_prepared["plan"]["tcl_preview"]
+
     prepared = manager.prepare_simulation(
         session_ref=session_ref,
         fileset="sim_1",

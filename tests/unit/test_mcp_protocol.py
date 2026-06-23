@@ -32,6 +32,7 @@ async def test_mcp_server_lists_core_tools() -> None:
                 "vivado_nonproject_opt_design",
                 "vivado_nonproject_place_design",
                 "vivado_nonproject_route_design",
+                "vivado_simulation_audit",
                 "vivado_prepare_simulation",
                 "vivado_launch_simulation",
                 "vivado_analyze_xsim_logs",

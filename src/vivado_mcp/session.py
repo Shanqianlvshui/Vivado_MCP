@@ -1481,6 +1481,7 @@ class VivadoSessionManager:
         create_if_missing: bool = True,
         timeout_seconds: int = 120,
         capture_diff: bool = False,
+        dry_run: bool = False,
     ) -> dict[str, object]:
         from .tcl import simulation_prepare_tcl
 
@@ -1488,10 +1489,28 @@ class VivadoSessionManager:
             self.path_policy.require_under_roots(path, label="testbench_file", must_exist=True)
             for path in testbench_files or []
         ]
-        include_paths = [
-            self.path_policy.require_under_roots(path, label="include_dir", must_exist=False) for path in include_dirs or []
-        ]
+        include_paths = (
+            None
+            if include_dirs is None
+            else [self.path_policy.require_under_roots(path, label="include_dir", must_exist=False) for path in include_dirs]
+        )
         running = self._get(session_ref)
+        if dry_run:
+            return {
+                "ok": True,
+                "session_ref": session_ref,
+                "dry_run": True,
+                "expect_destructive": True,
+                "plan": _simulation_prepare_plan(
+                    fileset=fileset,
+                    testbench_files=resolved_tb,
+                    top=top,
+                    include_dirs=include_paths,
+                    defines=defines,
+                    library=library,
+                    create_if_missing=create_if_missing,
+                ),
+            }
         return self._capture_diff_around(
             running=running,
             label=f"prepare_simulation_{fileset}",
@@ -1576,6 +1595,37 @@ class VivadoSessionManager:
             timeout_seconds=timeout_seconds,
             operation=operation,
         )
+
+    def simulation_audit(
+        self,
+        *,
+        session_ref: str,
+        fileset: str = "sim_1",
+        top: str | None = None,
+        timeout_seconds: int = 120,
+    ) -> dict[str, object]:
+        from .fileset_summary import parse_describe_fileset
+        from .simulation_summary import analyze_simulation_audit
+        from .tcl import describe_fileset_tcl
+
+        running = self._get(session_ref)
+        summaries_dir = running.record.session_dir / "summaries"
+        summaries_dir.mkdir(parents=True, exist_ok=True)
+        sim_path = summaries_dir / f"sim_fileset_{uuid.uuid4().hex[:8]}.tsv"
+        self._submit_tcl(running, describe_fileset_tcl(sim_path, name=fileset), timeout_seconds=timeout_seconds)
+        filesets: dict[str, object] = {"filesets": []}
+        if sim_path.exists():
+            filesets["filesets"] = [parse_describe_fileset(sim_path)]
+        ip_summary = self._ip_list_for_running(running, timeout_seconds=timeout_seconds)
+        ip_state = ip_summary.get("ips") if isinstance(ip_summary.get("ips"), dict) else {}
+        audit = analyze_simulation_audit(filesets=filesets, ip=ip_state, fileset=fileset, top=top)
+        audit["session_ref"] = session_ref
+        audit["fileset_summary_path"] = str(sim_path)
+        audit["fileset_summary_artifact_uri"] = artifact_uri(session_ref, sim_path.relative_to(running.record.session_dir).as_posix())
+        if ip_summary.get("summary_path"):
+            audit["ip_summary_path"] = ip_summary["summary_path"]
+            audit["ip_summary_artifact_uri"] = ip_summary.get("summary_artifact_uri", "")
+        return audit
 
     def analyze_xsim_logs(
         self,
@@ -2261,6 +2311,60 @@ def _ip_create_plan(
             {"tool": "vivado_ip_catalog_search", "why": "Confirm the exact VLNV before creating the IP."},
             {"tool": "vivado_describe_ip", "why": "Inspect generated IP properties and .xci state after creation."},
             {"tool": "vivado_generate_ip_outputs", "why": "Generate output products after the IP is created."},
+        ],
+    }
+
+
+def _simulation_prepare_plan(
+    *,
+    fileset: str,
+    testbench_files: list[Path],
+    top: str | None,
+    include_dirs: list[Path] | None,
+    defines: list[str] | None,
+    library: str | None,
+    create_if_missing: bool,
+) -> dict[str, object]:
+    from .tcl import simulation_prepare_tcl
+
+    actions: list[dict[str, object]] = []
+    if create_if_missing:
+        actions.append({"action": "create_fileset_if_missing", "fileset": fileset, "kind": "simulation"})
+    if testbench_files:
+        actions.append({"action": "add_testbench_files", "fileset": fileset, "paths": [str(path) for path in testbench_files]})
+    if include_dirs is not None:
+        actions.append({"action": "set_include_dirs", "fileset": fileset, "paths": [str(path) for path in include_dirs]})
+    if defines:
+        actions.append({"action": "set_defines", "fileset": fileset, "defines": defines})
+    if library:
+        actions.append({"action": "set_testbench_library", "fileset": fileset, "library": library})
+    if top:
+        actions.append({"action": "set_top", "fileset": fileset, "top": top})
+    actions.append({"action": "update_compile_order", "fileset": fileset})
+    return {
+        "operation": "prepare_simulation",
+        "fileset": fileset,
+        "actions": actions,
+        "risk_level": "medium" if actions else "low",
+        "would_execute_tcl": bool(actions),
+        "tcl_preview": simulation_prepare_tcl(
+            fileset=fileset,
+            testbench_files=testbench_files,
+            top=top,
+            include_dirs=include_dirs,
+            defines=defines,
+            library=library,
+            create_if_missing=create_if_missing,
+        ),
+        "recommended_docs": [
+            {"doc_id": "UG900", "title": "Vivado Design Suite User Guide: Logic Simulation"},
+            {"doc_id": "UG835", "title": "Vivado Design Suite Tcl Command Reference Guide"},
+            {"doc_id": "UG896", "title": "Vivado Design Suite User Guide: Designing with IP"},
+        ],
+        "recommendations": [
+            {"tool": "vivado_simulation_audit", "why": "Audit simulation fileset, testbench, and IP output-product state before launch."},
+            {"tool": "vivado_launch_simulation", "why": "Launch simulation after the dry-run plan is accepted."},
+            {"tool": "vivado_analyze_xsim_logs", "why": "Parse xsim/xelab/xvlog/xvhdl logs after launch failures."},
         ],
     }
 
