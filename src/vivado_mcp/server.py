@@ -18,7 +18,7 @@ from .official_docs import (
     search_official_docs,
 )
 from .session import VivadoSessionManager
-from .tcl_assist import build_tcl_command_help, review_tcl
+from .tcl_assist import build_tcl_command_help, review_tcl, tcl_command_doc_topic
 from .vivado_locator import check_vivado
 from .xilinx_docs import clean_bad_pdfs, download_xilinx_pdf, search_xilinx_docs, sync_official_docs
 
@@ -139,10 +139,10 @@ def vivado_tcl_command_help(
     """Combine official-doc search, MCP coverage guidance, and optional installed Vivado help for one Tcl command."""
     if not command.strip():
         return build_tcl_command_help(command=command)
+    doc_topic = topic or tcl_command_doc_topic(command)
     official_search = search_official_docs(
         query=command,
-        doc_id="UG835",
-        topic=topic,
+        topic=doc_topic,
         max_results=3,
         context_chars=260,
         timeout_seconds=max(timeout_seconds, 30),
@@ -157,7 +157,12 @@ def vivado_tcl_command_help(
             )
         except Exception as exc:
             installed_help = {"ok": False, "error": str(exc)}
-    return build_tcl_command_help(command=command, official_search=official_search, installed_help=installed_help)
+    return build_tcl_command_help(
+        command=command,
+        official_search=official_search,
+        installed_help=installed_help,
+        official_doc_topic=doc_topic,
+    )
 
 
 @mcp.tool()

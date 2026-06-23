@@ -9,7 +9,7 @@ Use this whenever a Vivado task depends on command syntax, flow rules, object pr
 3. Call `vivado_get_official_reference` for the selected document IDs and check `local_path_candidates` under `C:\Database\FPGA\Vivado_docs`.
 4. If a local PDF is missing, call `vivado_sync_official_docs` for packaged Vivado manuals or `vivado_download_xilinx_pdf` for one specific AMD/Xilinx document.
 5. Call `vivado_search_official_docs` with a command name, option, report name, or error text before generating Tcl for unfamiliar behavior.
-6. Call `vivado_tcl_command_help` for exact Tcl command routing; it combines UG835 search, MCP coverage, and optional installed Vivado help.
+6. Call `vivado_tcl_command_help` for exact Tcl command routing; it combines command-topic local PDF search, MCP coverage, and optional installed Vivado help.
 7. For exact command syntax, treat UG835 as the command authority.
 8. For object properties, treat UG912 as the property authority.
 9. For workflow concepts, use the topic-specific user guide before generating Tcl.
