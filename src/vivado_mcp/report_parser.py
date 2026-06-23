@@ -273,6 +273,32 @@ def append_report_generation_issues(analysis: dict[str, object], failed_reports:
     return analysis
 
 
+def append_report_unavailable_issues(analysis: dict[str, object], unavailable_reports: list[dict[str, object]]) -> dict[str, object]:
+    issues = analysis.setdefault("issues", [])
+    if not isinstance(issues, list):
+        issues = []
+        analysis["issues"] = issues
+    for report in unavailable_reports:
+        issues.append(
+            _enrich_issue(
+                _issue(
+                    "report.unavailable",
+                    str(report.get("severity") or "medium"),
+                    str(report.get("report_type") or "unknown"),
+                    str(report.get("reason") or "Report is not available in the current design stage."),
+                    str(report.get("next_step") or "Open or create a design stage that supports this report."),
+                    "reports",
+                    ["UG906", "UG904"],
+                    ["Vivado report current design open_run"],
+                    suggested_tools=report.get("suggested_tools"),
+                )
+            )
+        )
+    issues.sort(key=_issue_sort_key)
+    _refresh_analysis_rollups(analysis)
+    return analysis
+
+
 def _analyze_timing(report_type: str, summary: dict[str, object]) -> list[dict[str, object]]:
     issues: list[dict[str, object]] = []
     wns = _float_value(summary.get("wns"))
@@ -622,6 +648,8 @@ def _issue_sort_key(issue: dict[str, object]) -> tuple[int, int, str]:
         "drc.bitstream_blocker": 0,
         "drc.error": 0,
         "report.error": 0,
+        "report.unavailable": 0,
+        "report.generation_failed": 0,
         "timing.unconstrained_paths": 1,
         "timing.setup_failed": 2,
         "timing.path_slack_failed": 2,
@@ -749,7 +777,7 @@ def _blocked_flow_stages(issue_id: str) -> list[str]:
 def _quality_gates(issues: list[dict[str, object]]) -> dict[str, object]:
     issue_ids = {str(issue.get("issue_id") or "") for issue in issues}
     high_ids = {str(issue.get("issue_id") or "") for issue in issues if issue.get("severity") == "high"}
-    report_failed = "report.generation_failed" in issue_ids
+    report_failed = bool({"report.generation_failed", "report.unavailable"} & issue_ids)
     return {
         "constraints_clean": not report_failed
         and not any(issue_id in issue_ids for issue_id in ("timing.unconstrained_paths", "drc.io_standard_missing", "drc.io_pin_unconstrained")),
@@ -763,7 +791,7 @@ def _quality_gates(issues: list[dict[str, object]]) -> dict[str, object]:
 
 def _refresh_analysis_rollups(analysis: dict[str, object]) -> None:
     issues = [issue for issue in analysis.get("issues", []) if isinstance(issue, dict)]
-    report_failed = any(issue.get("issue_id") == "report.generation_failed" for issue in issues)
+    report_failed = any(issue.get("issue_id") in {"report.generation_failed", "report.unavailable"} for issue in issues)
     analysis["ok"] = not report_failed and not any(issue.get("severity") == "high" for issue in issues)
     analysis["summary"] = {
         **(analysis.get("summary") if isinstance(analysis.get("summary"), dict) else {}),

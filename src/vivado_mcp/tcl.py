@@ -490,6 +490,35 @@ def report_tcl(report_type: str, output_path: Path) -> str:
     )
 
 
+def report_context_tcl(output_path: Path) -> str:
+    out = quote_tcl(output_path)
+    out_string = str(output_path).replace("\\", "/")
+    return "\n".join(
+        [
+            f"set mcp_report_context_file {out}",
+            "set f [open $mcp_report_context_file w]",
+            "proc mcp_put {f args} { puts $f [join $args \"\\t\"] }",
+            "if {[catch {current_project} mcp_proj] || $mcp_proj eq \"\"} {",
+            "  mcp_put $f has_project 0",
+            "  close $f",
+            f"  return \"report_context={out_string}\"",
+            "}",
+            "mcp_put $f has_project 1",
+            "if {![catch {current_design} mcp_design] && $mcp_design ne \"\"} { mcp_put $f current_design $mcp_design }",
+            "foreach run [get_runs -quiet] {",
+            "  set status \"\"",
+            "  set progress \"\"",
+            "  catch { set status [get_property STATUS $run] }",
+            "  catch { set progress [get_property PROGRESS $run] }",
+            "  mcp_put $f run $run $status $progress",
+            "}",
+            "foreach run [get_runs -quiet -filter {IS_OPENED == 1}] { mcp_put $f open_run $run }",
+            "close $f",
+            f"return \"report_context={out_string}\"",
+        ]
+    )
+
+
 # ---------------------------------------------------------------------------
 # Hardware read-only helpers
 # ---------------------------------------------------------------------------

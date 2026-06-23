@@ -38,7 +38,7 @@ def test_session_raw_tcl_lifecycle(tmp_path: Path) -> None:
 
 
 def test_session_timeline_and_recovery_brief(tmp_path: Path) -> None:
-    wrapper = _make_fake_wrapper(tmp_path)
+    wrapper = _make_fake_wrapper(tmp_path, open_design=True)
     manager = VivadoSessionManager(default_workspace=tmp_path)
     started = manager.start_session(vivado_path=str(wrapper), open_gui=False)
     session_ref = str(started["session_ref"])
@@ -135,7 +135,7 @@ def test_report_writes_artifact(tmp_path: Path) -> None:
 
 
 def test_analyze_reports_generates_diagnostics(tmp_path: Path) -> None:
-    wrapper = _make_fake_wrapper(tmp_path)
+    wrapper = _make_fake_wrapper(tmp_path, open_design=True)
     manager = VivadoSessionManager(default_workspace=tmp_path)
     started = manager.start_session(vivado_path=str(wrapper), open_gui=False)
     session_ref = str(started["session_ref"])
@@ -160,6 +160,35 @@ def test_analyze_reports_generates_diagnostics(tmp_path: Path) -> None:
     assert result["analysis_artifact_uri"].startswith(f"vivado://sessions/{session_ref}/artifacts/")
     assert result["reports"]["timing_summary"]["report_artifact_uri"].startswith(f"vivado://sessions/{session_ref}/artifacts/")
     assert result["summaries"]["clock_interaction"]["unsafe_count"] == 1
+    manager.stop_session(session_ref, timeout_seconds=5)
+
+
+def test_analyze_reports_skips_design_reports_without_open_design(tmp_path: Path) -> None:
+    wrapper = _make_fake_wrapper(tmp_path)
+    manager = VivadoSessionManager(default_workspace=tmp_path)
+    started = manager.start_session(vivado_path=str(wrapper), open_gui=False)
+    session_ref = str(started["session_ref"])
+
+    result = manager.analyze_reports(
+        session_ref=session_ref,
+        report_types=["timing_summary", "utilization", "messages"],
+        timeout_seconds=5,
+    )
+
+    assert result["ok"] is True
+    assert result["analysis"]["ok"] is False
+    assert result["report_context"]["stage"] == "synthesis_complete_not_open"
+    assert result["reports"]["timing_summary"]["skipped"] is True
+    assert result["reports"]["timing_summary"]["reason"] == "no_open_design"
+    assert result["reports"]["messages"]["skipped"] is True
+    assert result["reports"]["messages"]["reason"] == "unsupported_report_command"
+    assert "timing_summary" not in result["summaries"]
+    assert "messages" not in result["summaries"]
+    issue_ids = [issue["issue_id"] for issue in result["analysis"]["issues"]]
+    assert "report.unavailable" in issue_ids
+    assert result["analysis"]["quality_gates"]["bitstream_ready"] is False
+    assert result["report_context"]["recommended_actions"][0]["tcl"] == "open_run synth_1"
+
     manager.stop_session(session_ref, timeout_seconds=5)
 
 
@@ -893,8 +922,9 @@ def test_stop_session_cleans_up_managed_gui_process(monkeypatch: pytest.MonkeyPa
     assert stopped["gui_cleanup"]["terminated_pids"] == [999]
 
 
-def _make_fake_wrapper(tmp_path: Path) -> Path:
+def _make_fake_wrapper(tmp_path: Path, *, open_design: bool = False) -> Path:
     fake = Path(__file__).resolve().parents[1] / "fixtures" / "fake_vivado.py"
     wrapper = tmp_path / "vivado.bat"
-    wrapper.write_text(f'@echo off\n"{sys.executable}" "{fake}" %*\n', encoding="utf-8")
+    extra = " --fake-open-design" if open_design else ""
+    wrapper.write_text(f'@echo off\n"{sys.executable}" "{fake}"{extra} %*\n', encoding="utf-8")
     return wrapper

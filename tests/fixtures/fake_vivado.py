@@ -8,6 +8,7 @@ from pathlib import Path
 
 def main() -> int:
     args = sys.argv[1:]
+    open_design = "--fake-open-design" in args
     if "-mode" in args and "batch" in args:
         print("VIVADO_MCP_VERSION=2023.1")
         return 0
@@ -32,7 +33,7 @@ def main() -> int:
             _write_status(session_dir, "busy", command.name)
             body = target.read_text(encoding="utf-8", errors="replace")
             result_path = done / f"{target.stem}.result.txt"
-            result = _result_for(body)
+            result = _result_for(body, open_design=open_design)
             result_path.write_text(
                 "\n".join(
                     [
@@ -64,7 +65,7 @@ def _write_status(session_dir: Path, state: str, detail: str) -> None:
     (session_dir / "status.txt").write_text(f"state={state}\ntime=now\ndetail={detail}\n", encoding="utf-8")
 
 
-def _result_for(body: str) -> str:
+def _result_for(body: str, *, open_design: bool = False) -> str:
     help_match = re.search(r"help \{([^}]+)\}", body)
     if help_match:
         return f"Usage: {help_match.group(1)} fake help"
@@ -194,6 +195,17 @@ def _result_for(body: str) -> str:
         return f"nonproject_step={path}"
     if "launch_runs" in body:
         return "status=complete"
+    report_context_match = re.search(r"set mcp_report_context_file \{([^}]+)\}", body)
+    if report_context_match:
+        path = Path(report_context_match.group(1))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        rows = ["has_project\t1"]
+        if open_design:
+            rows.append("current_design\tfake_design")
+            rows.append("open_run\tsynth_1")
+        rows.extend(["run\tsynth_1\tsynth_design Complete!\t100%", "run\timpl_1\tNot started\t0%", ""])
+        path.write_text("\n".join(rows), encoding="utf-8")
+        return f"report_context={path}"
     summary_match = re.search(r"set mcp_summary_file \{([^}]+)\}", body)
     if summary_match:
         path = Path(summary_match.group(1))

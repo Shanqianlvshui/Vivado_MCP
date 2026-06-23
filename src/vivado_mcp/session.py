@@ -1150,14 +1150,28 @@ class VivadoSessionManager:
         report_types: list[str] | None = None,
         timeout_seconds: int = 300,
     ) -> dict[str, object]:
-        from .report_parser import analyze_report_summaries, append_report_generation_issues
+        from .report_context import unavailable_report_reasons
+        from .report_parser import analyze_report_summaries, append_report_generation_issues, append_report_unavailable_issues
 
         selected = report_types or ["timing_summary", "clock_interaction", "utilization", "drc", "power", "methodology"]
         running = self._get(session_ref)
+        report_context = self._report_context_for_running(running, timeout_seconds=timeout_seconds)
+        context = report_context.get("report_context", {}) if isinstance(report_context.get("report_context"), dict) else {}
+        unavailable = unavailable_report_reasons(context, selected)
+        unavailable_by_type = {str(row.get("report_type") or ""): row for row in unavailable}
         reports: dict[str, dict[str, object]] = {}
         summaries: dict[str, dict[str, object]] = {}
         errors: list[dict[str, object]] = []
         for report_type in selected:
+            if report_type in unavailable_by_type:
+                reports[report_type] = {
+                    "ok": False,
+                    "skipped": True,
+                    "reason": unavailable_by_type[report_type].get("reason"),
+                    "next_step": unavailable_by_type[report_type].get("next_step"),
+                    "suggested_tools": unavailable_by_type[report_type].get("suggested_tools"),
+                }
+                continue
             try:
                 report = self.report(session_ref=session_ref, report_type=report_type, timeout_seconds=timeout_seconds)
             except Exception as exc:
@@ -1186,16 +1200,20 @@ class VivadoSessionManager:
             if isinstance(summary, dict):
                 summaries[report_type] = summary
         analysis = analyze_report_summaries(summaries)
+        if unavailable:
+            analysis = append_report_unavailable_issues(analysis, unavailable)
         if errors:
             analysis = append_report_generation_issues(analysis, errors)
         analyses_dir = running.record.session_dir / "analyses"
         analyses_dir.mkdir(parents=True, exist_ok=True)
         output_path = analyses_dir / f"report_analysis_{uuid.uuid4().hex[:8]}.json"
-        output_payload = {"reports": reports, "summaries": summaries, "analysis": analysis}
+        output_payload = {"reports": reports, "summaries": summaries, "analysis": analysis, "report_context": context}
         output_path.write_text(json.dumps(output_payload, indent=2, sort_keys=True), encoding="utf-8")
         return {
             "ok": True,
             "session_ref": session_ref,
+            "report_context": context,
+            "report_context_artifact_uri": report_context.get("summary_artifact_uri"),
             "reports": reports,
             "summaries": summaries,
             "analysis": analysis,
@@ -2141,6 +2159,21 @@ class VivadoSessionManager:
             result["bd_summary"] = parse_bd_summary(output_path)
         return result
 
+    def _report_context_for_running(self, running: "_RunningSession", *, timeout_seconds: int) -> dict[str, object]:
+        from .report_context import parse_report_context
+        from .tcl import report_context_tcl
+
+        summaries_dir = running.record.session_dir / "summaries"
+        summaries_dir.mkdir(parents=True, exist_ok=True)
+        output_path = summaries_dir / f"report_context_{uuid.uuid4().hex[:8]}.tsv"
+        raw_result = self._submit_tcl(running, report_context_tcl(output_path), timeout_seconds=timeout_seconds)
+        result = _result_to_dict(raw_result, expect_destructive=False)
+        result["summary_path"] = str(output_path)
+        result["summary_artifact_uri"] = artifact_uri(running.record.session_ref, output_path.relative_to(running.record.session_dir).as_posix())
+        if output_path.exists():
+            result["report_context"] = parse_report_context(output_path)
+        return result
+
     def _submit_tcl(self, running: "_RunningSession", tcl: str, *, timeout_seconds: int) -> TclCommandResult:
         if running.process.poll() is not None:
             raise VivadoSessionError(f"Vivado session is stopped with code {running.process.returncode}")
@@ -2485,6 +2518,8 @@ def _summary_type_from_artifact(path: Path) -> str:
         return "fileset"
     if name.startswith("constraint"):
         return "constraint"
+    if name.startswith("report_context"):
+        return "report_context"
     if name.startswith("simulation") or name.startswith("xsim"):
         return "simulation"
     if name.startswith("project"):
@@ -2516,6 +2551,7 @@ def _artifact_tool_hint(path: Path, kind: str) -> str:
             "ip": "vivado_list_ips",
             "fileset": "vivado_describe_fileset",
             "constraint": "vivado_constraint_diagnostics",
+            "report_context": "vivado_analyze_reports",
             "simulation": "vivado_simulation_audit",
             "project": "vivado_project_summary",
         }
