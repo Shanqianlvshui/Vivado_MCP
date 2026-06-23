@@ -1329,6 +1329,7 @@ class VivadoSessionManager:
         properties: dict[str, object] | None = None,
         timeout_seconds: int = 300,
         capture_diff: bool = False,
+        dry_run: bool = False,
     ) -> dict[str, object]:
         from .tcl import ip_create_tcl
 
@@ -1341,6 +1342,19 @@ class VivadoSessionManager:
         )
         resolved_output_dir = self.path_policy.require_under_roots(output_dir, label="ip_output_dir", must_exist=False)
         running = self._get(session_ref)
+        if dry_run:
+            return {
+                "ok": True,
+                "session_ref": session_ref,
+                "dry_run": True,
+                "expect_destructive": True,
+                "plan": _ip_create_plan(
+                    vlnv=resolved_vlnv,
+                    module_name=module_name,
+                    output_dir=resolved_output_dir,
+                    properties=properties,
+                ),
+            }
         return self._capture_diff_around(
             running=running,
             label=f"ip_create_{module_name}",
@@ -1394,6 +1408,17 @@ class VivadoSessionManager:
         if output_path.exists():
             result["ip"] = parse_ip_detail(output_path)
         return result
+
+    def ip_upgrade_check(self, *, session_ref: str, timeout_seconds: int = 120) -> dict[str, object]:
+        from .ip_summary import analyze_ip_upgrade
+
+        listed = self.ip_list(session_ref=session_ref, timeout_seconds=timeout_seconds)
+        summary = listed.get("ips") if isinstance(listed.get("ips"), dict) else {}
+        analysis = analyze_ip_upgrade(summary)
+        analysis["session_ref"] = session_ref
+        analysis["summary_path"] = listed.get("summary_path", "")
+        analysis["summary_artifact_uri"] = listed.get("summary_artifact_uri", "")
+        return analysis
 
     def ip_upgrade(
         self,
@@ -2189,6 +2214,53 @@ def _constraint_set_apply_plan(
         "recommendations": [
             {"tool": "vivado_xdc_order_check", "why": "Check XDC order before and after applying constraint changes."},
             {"tool": "vivado_source_audit", "why": "Audit source and constraint placement after applying changes."},
+        ],
+    }
+
+
+def _ip_create_plan(
+    *,
+    vlnv: str,
+    module_name: str,
+    output_dir: Path,
+    properties: dict[str, object] | None,
+) -> dict[str, object]:
+    from .tcl import ip_create_tcl
+
+    actions: list[dict[str, object]] = [
+        {
+            "action": "create_ip",
+            "vlnv": vlnv,
+            "module_name": module_name,
+            "output_dir": str(output_dir),
+        }
+    ]
+    if properties:
+        actions.append({"action": "set_ip_properties", "module_name": module_name, "properties": properties})
+    actions.append({"action": "inspect_ip", "tool": "vivado_describe_ip", "name": module_name})
+    return {
+        "operation": "ip_create",
+        "module_name": module_name,
+        "vlnv": vlnv,
+        "output_dir": str(output_dir),
+        "actions": actions,
+        "risk_level": "medium",
+        "would_execute_tcl": True,
+        "tcl_preview": ip_create_tcl(
+            vlnv=vlnv,
+            module_name=module_name,
+            output_dir=output_dir,
+            properties=properties,
+        ),
+        "recommended_docs": [
+            {"doc_id": "UG896", "title": "Vivado Design Suite User Guide: Designing with IP"},
+            {"doc_id": "UG835", "title": "Vivado Design Suite Tcl Command Reference Guide"},
+            {"doc_id": "IP Product Guide", "title": "Search by IP name or VLNV before setting CONFIG properties."},
+        ],
+        "recommendations": [
+            {"tool": "vivado_ip_catalog_search", "why": "Confirm the exact VLNV before creating the IP."},
+            {"tool": "vivado_describe_ip", "why": "Inspect generated IP properties and .xci state after creation."},
+            {"tool": "vivado_generate_ip_outputs", "why": "Generate output products after the IP is created."},
         ],
     }
 

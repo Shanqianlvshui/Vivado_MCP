@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from vivado_mcp.ip_summary import parse_ip_catalog, parse_ip_detail, parse_ip_list
+from vivado_mcp.ip_summary import analyze_ip_upgrade, parse_ip_catalog, parse_ip_detail, parse_ip_list
 
 
 def test_parse_ip_catalog_returns_search_rows(tmp_path: Path) -> None:
@@ -17,6 +17,7 @@ def test_parse_ip_catalog_returns_search_rows(tmp_path: Path) -> None:
     assert parsed["count"] == 1
     assert parsed["ips"][0]["name"] == "axi_gpio"
     assert parsed["ips"][0]["supported"] is True
+    assert parsed["ips"][0]["recommended_docs"][0]["doc_id"] == "UG896"
 
 
 def test_parse_ip_list_and_detail(tmp_path: Path) -> None:
@@ -51,5 +52,31 @@ def test_parse_ip_list_and_detail(tmp_path: Path) -> None:
 
     assert listed["has_project"] is True
     assert listed["ips"][0]["upgrade_available"] is True
+    assert listed["ips"][0]["status"]["needs_upgrade"] is True
+    assert listed["upgrade_check"]["upgrade_needed_count"] == 1
     assert detail["properties"]["CONFIG.C_GPIO_WIDTH"] == "32"
     assert detail["targets"] == ["instantiation_template", "synthesis"]
+    assert detail["status"]["needs_upgrade"] is True
+
+
+def test_analyze_ip_upgrade_flags_locked_and_stale_ip() -> None:
+    summary = {
+        "ips": [
+            {
+                "name": "axi_gpio_0",
+                "vlnv": "xilinx.com:ip:axi_gpio:2.0",
+                "locked": True,
+                "upgrade_available": True,
+                "generated": False,
+                "synthesis_status": "",
+            }
+        ]
+    }
+
+    analysis = analyze_ip_upgrade(summary)
+
+    assert analysis["ok"] is False
+    assert analysis["upgrade_needed_count"] == 1
+    issue_ids = {issue["issue_id"] for issue in analysis["issues"]}
+    assert {"ip.locked", "ip.upgrade_available", "ip.outputs_not_generated"} <= issue_ids
+    assert analysis["recommendations"][0]["tool"] == "vivado_describe_ip"

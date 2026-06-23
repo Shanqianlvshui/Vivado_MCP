@@ -144,12 +144,13 @@ def help_topic(topic: str | None = None) -> dict[str, object]:
     if normalized in {"ip", "ips", "ip-catalog", "xci", "create-ip", "upgrade-ip", "output-products"}:
         return {
             "topic": "ip_flow",
-            "summary": "Search the Vivado IP catalog, create project IP, inspect .xci state, upgrade IP explicitly, and generate output products with structured tools.",
+            "summary": "Search the Vivado IP catalog, dry-run/create project IP, inspect .xci state, check upgrade risk, and generate output products with structured tools.",
             "recommended_tools": [
                 "vivado_ip_catalog_search",
                 "vivado_create_ip",
                 "vivado_list_ips",
                 "vivado_describe_ip",
+                "vivado_ip_upgrade_check",
                 "vivado_upgrade_ip",
                 "vivado_generate_ip_outputs",
                 "vivado_search_official_docs",
@@ -308,9 +309,10 @@ def suggest_next_steps(
         return {
             "recommendations": [
                 {"tool": "vivado_ip_catalog_search", "why": "Find the exact VLNV and IP catalog metadata before creating IP."},
-                {"tool": "vivado_create_ip", "why": "Create project IP with path validation, CONFIG properties, and optional state diff."},
+                {"tool": "vivado_create_ip", "why": "Dry-run or create project IP with path validation, CONFIG properties, and optional state diff."},
                 {"tool": "vivado_list_ips", "why": "Inspect project IP instances, .xci paths, lock state, upgrade state, and generation state."},
                 {"tool": "vivado_describe_ip", "why": "Inspect one IP instance's VLNV, CONFIG properties, and generated targets."},
+                {"tool": "vivado_ip_upgrade_check", "why": "Check lock, upgrade, and generated-output state before mutating .xci files."},
                 {"tool": "vivado_generate_ip_outputs", "why": "Generate IP output products through a structured auditable tool."},
                 {"tool": "vivado_upgrade_ip", "why": "Upgrade IP only when .xci mutation is explicitly confirmed with expect_upgrade=true."},
             ],

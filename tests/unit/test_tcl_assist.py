@@ -106,7 +106,7 @@ def test_command_coverage_for_priority_cross_flow_commands() -> None:
 
     upgrade_ip = tcl_command_coverage("upgrade_ip")
     assert upgrade_ip["coverage_status"] == "covered"
-    assert upgrade_ip["recommended_tools"] == ["vivado_upgrade_ip", "vivado_describe_ip"]
+    assert upgrade_ip["recommended_tools"] == ["vivado_ip_upgrade_check", "vivado_describe_ip", "vivado_upgrade_ip"]
 
     generate_target = tcl_command_coverage("generate_target")
     assert "vivado_generate_ip_outputs" in generate_target["recommended_tools"]

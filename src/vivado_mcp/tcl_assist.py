@@ -398,9 +398,9 @@ COMMAND_COVERAGE: dict[str, dict[str, object]] = {
     },
     "upgrade_ip": {
         "coverage_status": "covered",
-        "recommended_tools": ["vivado_upgrade_ip", "vivado_describe_ip"],
+        "recommended_tools": ["vivado_ip_upgrade_check", "vivado_describe_ip", "vivado_upgrade_ip"],
         "recommendation": "prefer_structured_tool",
-        "notes": "Use structured IP upgrade with expect_upgrade=true so .xci mutation is explicit and auditable.",
+        "notes": "Check lock and upgrade state first, then use structured IP upgrade with expect_upgrade=true so .xci mutation is explicit and auditable.",
     },
     "report_timing_summary": {
         "coverage_status": "partial",

@@ -37,6 +37,7 @@ def test_help_topic_points_to_skill() -> None:
     ip_help = help_topic("ip")
     assert "vivado_ip_catalog_search" in ip_help["recommended_tools"]
     assert "vivado_create_ip" in ip_help["recommended_tools"]
+    assert "vivado_ip_upgrade_check" in ip_help["recommended_tools"]
     assert "vivado_upgrade_ip" in ip_help["recommended_tools"]
 
     sim_help = help_topic("simulation")
@@ -106,6 +107,7 @@ def test_suggest_next_steps_routes_ip_work() -> None:
 
     assert tools[0] == "vivado_ip_catalog_search"
     assert "vivado_create_ip" in tools
+    assert "vivado_ip_upgrade_check" in tools
     assert "vivado_generate_ip_outputs" in tools
 
 

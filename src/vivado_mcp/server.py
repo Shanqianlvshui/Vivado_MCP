@@ -842,8 +842,9 @@ def vivado_create_ip(
     properties: dict[str, object] | None = None,
     timeout_seconds: int = 300,
     capture_diff: bool = False,
+    dry_run: bool = False,
 ) -> dict[str, object]:
-    """Create a project IP instance from a VLNV or vendor/library/ip_name/version fields."""
+    """Create a project IP instance from a VLNV or vendor/library/ip_name/version fields, or return a dry-run plan."""
     return manager.ip_create(
         session_ref=session_ref,
         module_name=module_name,
@@ -856,6 +857,7 @@ def vivado_create_ip(
         properties=properties,
         timeout_seconds=timeout_seconds,
         capture_diff=capture_diff,
+        dry_run=dry_run,
     )
 
 
@@ -869,6 +871,12 @@ def vivado_list_ips(session_ref: str, timeout_seconds: int = 120) -> dict[str, o
 def vivado_describe_ip(session_ref: str, name: str, timeout_seconds: int = 120) -> dict[str, object]:
     """Describe one project IP instance, including common properties and generated targets."""
     return manager.ip_describe(session_ref=session_ref, name=name, timeout_seconds=timeout_seconds)
+
+
+@mcp.tool()
+def vivado_ip_upgrade_check(session_ref: str, timeout_seconds: int = 120) -> dict[str, object]:
+    """Check project IP lock, upgrade, and generated-output state without modifying .xci files."""
+    return manager.ip_upgrade_check(session_ref=session_ref, timeout_seconds=timeout_seconds)
 
 
 @mcp.tool()

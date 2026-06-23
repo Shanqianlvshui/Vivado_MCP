@@ -39,6 +39,7 @@ async def test_mcp_server_lists_core_tools() -> None:
                 "vivado_create_ip",
                 "vivado_list_ips",
                 "vivado_describe_ip",
+                "vivado_ip_upgrade_check",
                 "vivado_upgrade_ip",
                 "vivado_generate_ip_outputs",
                 "vivado_add_sources",
