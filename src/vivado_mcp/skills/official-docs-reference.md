@@ -7,12 +7,13 @@ Use this whenever a Vivado task depends on command syntax, flow rules, object pr
 1. Call `vivado_official_reference_guide` with a topic such as `tcl`, `project`, `bd`, `ip`, `constraints`, `build`, `simulation`, `reports`, `hardware`, `dfx`, `methodology`, `io`, `installation`, `migration`, `libraries`, or `embedded`.
 2. Read the recommended document summaries and choose the smallest set of official references needed for the task.
 3. Call `vivado_get_official_reference` for the selected document IDs and check `local_path_candidates` under `C:\Database\FPGA\Vivado_docs`.
-4. Call `vivado_search_official_docs` with a command name, option, report name, or error text before generating Tcl for unfamiliar behavior.
-5. For exact command syntax, treat UG835 as the command authority.
-6. For object properties, treat UG912 as the property authority.
-7. For workflow concepts, use the topic-specific user guide before generating Tcl.
-8. Prefer structured MCP workflow tools when they cover the task.
-9. Use `vivado_run_tcl` or `vivado_source_tcl` only when the workflow tools do not expose the needed command.
+4. If a local PDF is missing, call `vivado_sync_official_docs` for packaged Vivado manuals or `vivado_download_xilinx_pdf` for one specific AMD/Xilinx document.
+5. Call `vivado_search_official_docs` with a command name, option, report name, or error text before generating Tcl for unfamiliar behavior.
+6. For exact command syntax, treat UG835 as the command authority.
+7. For object properties, treat UG912 as the property authority.
+8. For workflow concepts, use the topic-specific user guide before generating Tcl.
+9. Prefer structured MCP workflow tools when they cover the task.
+10. Use `vivado_run_tcl` or `vivado_source_tcl` only when the workflow tools do not expose the needed command.
 
 ## Topic Routing
 
@@ -38,6 +39,7 @@ Use this whenever a Vivado task depends on command syntax, flow rules, object pr
 - The MCP package includes official-document metadata and routing guidance, not the full AMD document text or every individual IP product guide.
 - The default local documentation root is `C:\Database\FPGA\Vivado_docs`; deployments can override it with `VIVADO_MCP_DOCS_ROOT`.
 - Local PDF search uses Poppler `pdftotext`; set `VIVADO_MCP_PDFTOTEXT` when it is not on `PATH`.
+- PDF download uses AMD KHub APIs and verifies the `%PDF` signature instead of saving Fluid Topics HTML pages.
 - If an installed Vivado version differs from the packaged guide version, prefer the installed Vivado command help for version-specific syntax checks.
 - Do not assume every UG835 command has a structured MCP tool. Expert mode can run raw Tcl, but workflow tools should stay the first choice for repeatable operations.
 - For destructive or hardware-affecting Tcl, call out the risk before execution and use `expect_destructive=true`.

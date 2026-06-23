@@ -19,6 +19,7 @@ from .official_docs import (
 )
 from .session import VivadoSessionManager
 from .vivado_locator import check_vivado
+from .xilinx_docs import clean_bad_pdfs, download_xilinx_pdf, search_xilinx_docs, sync_official_docs
 
 mcp = FastMCP("vivado-mcp")
 manager = VivadoSessionManager(default_workspace=Path(os.environ.get("VIVADO_MCP_WORKSPACE", Path.cwd())).resolve())
@@ -420,6 +421,45 @@ def vivado_search_official_docs(
         context_chars=context_chars,
         timeout_seconds=timeout_seconds,
     )
+
+
+@mcp.tool()
+def vivado_search_xilinx_docs(query: str, limit: int = 10, timeout_seconds: int = 30) -> dict[str, object]:
+    """Search AMD KHub for Xilinx/AMD PDFs and documentation entries."""
+    return search_xilinx_docs(query=query, limit=limit, timeout_seconds=timeout_seconds)
+
+
+@mcp.tool()
+def vivado_download_xilinx_pdf(
+    source: str,
+    output_name: str | None = None,
+    overwrite: bool = False,
+    timeout_seconds: int = 120,
+) -> dict[str, object]:
+    """Download one AMD/Xilinx PDF into the configured local docs root and verify the PDF signature."""
+    return download_xilinx_pdf(
+        source=source,
+        output_name=output_name,
+        out_dir=local_docs_root(),
+        overwrite=overwrite,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+@mcp.tool()
+def vivado_sync_official_docs(
+    doc_ids: list[str] | None = None,
+    overwrite: bool = False,
+    timeout_seconds: int = 120,
+) -> dict[str, object]:
+    """Download packaged Vivado official references into the configured local docs root."""
+    return sync_official_docs(doc_ids=doc_ids, overwrite=overwrite, timeout_seconds=timeout_seconds)
+
+
+@mcp.tool()
+def vivado_clean_bad_pdfs(delete_bad: bool = False) -> dict[str, object]:
+    """Find local docs-root PDFs that fail the %PDF signature check, optionally deleting them."""
+    return clean_bad_pdfs(root=local_docs_root(), delete_bad=delete_bad)
 
 
 @mcp.resource("vivado://help/index", mime_type="text/markdown")

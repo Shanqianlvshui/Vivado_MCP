@@ -47,6 +47,9 @@ The MCP should expose tutorial content through both tools and resources:
 - `vivado_suggest_next_steps`
 - `vivado_official_reference_guide`
 - `vivado_search_official_docs`
+- `vivado_sync_official_docs`
+- `vivado_download_xilinx_pdf`
+- `vivado_search_xilinx_docs`
 - `vivado_list_official_references`
 - `vivado_get_official_reference`
 - `vivado://skills/index`
@@ -100,11 +103,12 @@ AI clients should use the MCP in this order:
 1. Call `vivado_help(topic="official_docs")` or read `vivado://skills/official-docs-reference` before planning unfamiliar Vivado actions.
 2. Call `vivado_official_reference_guide(topic=...)` to select the authoritative AMD manuals for the task.
 3. Call `vivado_get_official_reference(doc_id=...)` for the exact official URL and local PDF candidates under `C:\Database\FPGA\Vivado_docs`.
-4. Call `vivado_search_official_docs(query=..., doc_id=... or topic=...)` for exact command names, options, and short local PDF snippets.
-5. Prefer structured workflow tools such as project, report, and BD tools when they cover the task.
-6. Use `vivado_run_tcl` or `vivado_source_tcl` only for commands that are not yet modeled as workflow tools.
-7. After every mutating action, call `vivado_project_summary`, `vivado_bd_summary`, `vivado_report`, or `vivado_list_artifacts` to inspect the resulting state.
-8. Call `vivado_focus_gui` only when the user explicitly wants Vivado brought to the foreground.
+4. If local PDFs are missing, call `vivado_sync_official_docs` for the packaged Vivado catalog or `vivado_download_xilinx_pdf` for a specific AMD/Xilinx PDF.
+5. Call `vivado_search_official_docs(query=..., doc_id=... or topic=...)` for exact command names, options, and short local PDF snippets.
+6. Prefer structured workflow tools such as project, report, and BD tools when they cover the task.
+7. Use `vivado_run_tcl` or `vivado_source_tcl` only for commands that are not yet modeled as workflow tools.
+8. After every mutating action, call `vivado_project_summary`, `vivado_bd_summary`, `vivado_report`, or `vivado_list_artifacts` to inspect the resulting state.
+9. Call `vivado_focus_gui` only when the user explicitly wants Vivado brought to the foreground.
 
 ## First Manual Test
 
@@ -153,6 +157,10 @@ After connecting the MCP client, use this sequence:
 - `vivado_get_official_reference`
 - `vivado_official_reference_guide`
 - `vivado_search_official_docs`
+- `vivado_search_xilinx_docs`
+- `vivado_download_xilinx_pdf`
+- `vivado_sync_official_docs`
+- `vivado_clean_bad_pdfs`
 
 ## Development Checks
 
@@ -185,6 +193,13 @@ vivado://official-docs/{doc_id}
 Use `vivado_official_reference_guide(topic=...)` for AI routing. Current topics include `tcl`, `project`, `bd`, `ip`, `constraints`, `build`, `simulation`, `reports`, `hardware`, `dfx`, `methodology`, `io`, `installation`, `migration`, `libraries`, and `embedded`.
 
 Use `vivado_search_official_docs(query=...)` to search the local PDFs under `C:\Database\FPGA\Vivado_docs`. The server uses `pdftotext` from Poppler and caches extracted text under `.vivado_mcp_text_cache` in the docs root. Set `VIVADO_MCP_PDFTOTEXT` if `pdftotext` is not on `PATH`.
+
+The MCP also includes the AMD/Xilinx PDF download workflow from the `download-xilinx-pdf` skill:
+
+- `vivado_search_xilinx_docs(query=...)`: search AMD KHub.
+- `vivado_download_xilinx_pdf(source=...)`: resolve AMD Fluid Topics `/go`, `/v/u`, and `/r/{mapId}/root` pages, download through KHub content APIs, and verify the `%PDF` signature.
+- `vivado_sync_official_docs(doc_ids=[...])`: populate or refresh the packaged Vivado official-reference catalog.
+- `vivado_clean_bad_pdfs(delete_bad=false)`: find local PDFs that do not start with `%PDF`.
 
 ## Explicitly out of scope for the first version
 

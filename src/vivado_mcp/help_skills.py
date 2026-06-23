@@ -137,6 +137,8 @@ def help_topic(topic: str | None = None) -> dict[str, object]:
             "recommended_tools": [
                 "vivado_official_reference_guide",
                 "vivado_search_official_docs",
+                "vivado_sync_official_docs",
+                "vivado_download_xilinx_pdf",
                 "vivado_list_official_references",
                 "vivado_get_official_reference",
             ],
@@ -163,6 +165,7 @@ def suggest_next_steps(
             "recommendations": [
                 {"tool": "vivado_official_reference_guide", "why": "Choose the official AMD documents that apply to the requested Vivado task."},
                 {"tool": "vivado_search_official_docs", "why": "Search local official PDFs for exact commands, options, and short supporting snippets."},
+                {"tool": "vivado_sync_official_docs", "why": "Populate or refresh the local official Vivado PDF library when files are missing."},
                 {"tool": "vivado_list_official_references", "why": "Search the packaged official-document catalog by topic or keyword."},
             ],
             "related_resources": ["vivado://official-docs/index", "vivado://skills/official-docs-reference"],
