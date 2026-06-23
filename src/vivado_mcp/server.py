@@ -40,7 +40,7 @@ def vivado_start_session(
     capability_profile: Literal["safe", "trusted-local", "unrestricted"] = "trusted-local",
     startup_timeout_seconds: int = 45,
     gui_wait_seconds: int = 20,
-    activate_gui: bool = True,
+    activate_gui: bool = False,
 ) -> dict[str, object]:
     """Start a managed Vivado Tcl session, optionally opening and verifying the GUI."""
     return manager.start_session(
@@ -140,7 +140,7 @@ def vivado_open_project(
     project_path: str,
     timeout_seconds: int = 120,
     gui_wait_seconds: int = 20,
-    focus_gui: bool = True,
+    focus_gui: bool = False,
 ) -> dict[str, object]:
     """Open an existing Vivado project in the managed session and refresh GUI visibility state."""
     return manager.open_project(

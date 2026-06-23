@@ -38,7 +38,7 @@ class VivadoSessionManager:
         capability_profile: CapabilityProfile = "trusted-local",
         startup_timeout_seconds: int = 45,
         gui_wait_seconds: int = 20,
-        activate_gui: bool = True,
+        activate_gui: bool = False,
     ) -> dict[str, object]:
         workspace = self.path_policy.require_under_roots(
             workspace_dir or self.default_workspace,
@@ -302,7 +302,7 @@ class VivadoSessionManager:
         project_path: str,
         timeout_seconds: int = 120,
         gui_wait_seconds: int = 20,
-        focus_gui: bool = True,
+        focus_gui: bool = False,
     ) -> dict[str, object]:
         from .tcl import open_project_tcl
 

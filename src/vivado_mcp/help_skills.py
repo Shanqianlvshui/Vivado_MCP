@@ -87,7 +87,7 @@ def help_topic(topic: str | None = None) -> dict[str, object]:
     if normalized in {"gui", "gui-session", "session"}:
         return {
             "topic": "gui_session",
-            "summary": "Start a managed Vivado Tcl session with `open_gui=true`, verify `gui.visible`, and focus the same Vivado window when needed.",
+            "summary": "Start a managed Vivado Tcl session with `open_gui=true`, verify `gui.visible` without stealing focus, and focus the window only when requested.",
             "recommended_tools": ["vivado_check_installation", "vivado_start_session", "vivado_session_state", "vivado_focus_gui"],
             "related_resources": ["vivado://skills/gui-session"],
         }

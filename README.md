@@ -17,7 +17,7 @@ Current design documents:
 
 - Discover a local Vivado installation and report its version.
 - Start and stop a managed Vivado Tcl/GUI session.
-- Verify whether a requested GUI session has a visible Vivado window, and bring that window forward when possible.
+- Verify whether a requested GUI session has a visible Vivado window without stealing focus, and bring that window forward only when explicitly requested.
 - Submit raw Tcl to a managed session when trusted-local expert mode is enabled.
 - Create or open project-mode Vivado projects.
 - Add RTL/source/constraint files with path validation.
@@ -90,7 +90,7 @@ After connecting the MCP client, use this sequence:
 1. `vivado_help` with `topic="gui_session"`.
 2. `vivado_check_installation`.
 3. `vivado_start_session` with `open_gui=true`, then confirm `gui.visible=true`.
-4. `vivado_focus_gui` if the user cannot see the Vivado window.
+4. `vivado_focus_gui` only if the user asks to bring the Vivado window forward.
 5. `vivado_run_tcl` with `tcl="return \"version=[version -short]\""`.
 6. `vivado_project_summary` after opening or creating a project.
 7. `vivado_list_artifacts` to inspect command/result files.
