@@ -18,7 +18,7 @@ Use this for ordinary Project Mode FPGA work: create/open a project, add files, 
 12. Call `vivado_xdc_order_check` before synthesis when constraints changed.
 13. Call `vivado_run_synthesis`.
 14. If synthesis succeeds, call `vivado_run_implementation`.
-15. Call `vivado_analyze_reports` for timing, utilization, DRC, methodology, and power diagnostics.
+15. Call `vivado_analyze_reports` for timing, utilization, DRC, methodology, and power diagnostics; use issue IDs, evidence, and official-doc queries to decide the next action.
 16. Use targeted `vivado_report` calls after the aggregate analysis identifies a failure area.
 
 ## Notes For AI
@@ -30,3 +30,4 @@ Use this for ordinary Project Mode FPGA work: create/open a project, add files, 
 - If simulation fails, inspect `vivado_analyze_xsim_logs` before changing RTL or IP.
 - If a Non-project step fails, inspect its command artifact and requested reports before rerunning later steps.
 - If hardware discovery fails, inspect `vivado_hw_discover` warning rows and verify the hw_server URL or cable target before expert Tcl.
+- Fix `timing.unconstrained_paths`, `drc.io_standard_missing`, and `drc.io_pin_unconstrained` before treating implementation strategy as the main problem.

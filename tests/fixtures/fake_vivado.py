@@ -357,13 +357,29 @@ def _result_for(body: str) -> str:
 def _write_fake_report(path: Path, body: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if "report_timing_summary" in body:
-        text = "FAKE TIMING REPORT\nWNS(ns) -0.125\nTNS(ns) -1.250\nFailing Endpoints: 4\n"
+        text = (
+            "FAKE TIMING REPORT\n"
+            "WNS(ns) -0.125\n"
+            "TNS(ns) -1.250\n"
+            "WHS(ns) -0.025\n"
+            "THS(ns) -0.050\n"
+            "Failing Endpoints: 4\n"
+            "Unconstrained Paths: 2\n"
+            "Clock Interaction Warnings: 1\n"
+        )
     elif "report_utilization" in body:
         text = "FAKE UTILIZATION REPORT\n| DSPs | 95 | 100 | 95.0 |\n| CLB LUTs | 1,234 | 10,000 | 12.34 |\n"
     elif "report_drc" in body:
         text = "FAKE DRC REPORT\nERROR: [DRC NSTD-1] Unspecified I/O Standard\n"
     elif "report_power" in body:
-        text = "FAKE POWER REPORT\nTotal On-Chip Power (W) 7.500\nDynamic (W) 6.000\nDevice Static (W) 1.500\n"
+        text = (
+            "FAKE POWER REPORT\n"
+            "Total On-Chip Power (W) 7.500\n"
+            "Dynamic (W) 6.000\n"
+            "Device Static (W) 1.500\n"
+            "Junction Temperature (C) 86.0\n"
+            "Thermal Margin (C) 4.0\n"
+        )
     elif "report_methodology" in body:
         text = "FAKE METHODOLOGY REPORT\nCRITICAL WARNING: [METHODOLOGY TIMING-1] Review clocks\n"
     else:

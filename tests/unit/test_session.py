@@ -111,10 +111,13 @@ def test_analyze_reports_generates_diagnostics(tmp_path: Path) -> None:
     issue_ids = [issue["issue_id"] for issue in result["analysis"]["issues"]]
     assert result["ok"] is True
     assert result["analysis"]["ok"] is False
-    assert issue_ids[:2] == ["drc.error", "timing.setup_failed"]
-    assert "utilization.high" in issue_ids
+    assert issue_ids[:3] == ["drc.io_standard_missing", "timing.unconstrained_paths", "timing.setup_failed"]
+    assert "timing.hold_failed" in issue_ids
+    assert "timing.clock_interaction_issue" in issue_ids
+    assert "utilization.resource_pressure" in issue_ids
     assert "power.high_total" in issue_ids
-    assert "methodology.critical_warning" in issue_ids
+    assert "power.thermal_risk" in issue_ids
+    assert "methodology.clocking_issue" in issue_ids
     assert result["analysis_artifact_uri"].startswith(f"vivado://sessions/{session_ref}/artifacts/")
     assert result["reports"]["timing_summary"]["report_artifact_uri"].startswith(f"vivado://sessions/{session_ref}/artifacts/")
     manager.stop_session(session_ref, timeout_seconds=5)

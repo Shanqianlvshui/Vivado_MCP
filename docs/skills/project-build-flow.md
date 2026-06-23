@@ -26,7 +26,7 @@ Use this for ordinary Project Mode FPGA work: create/open a project, add files, 
 14. Call `vivado_xdc_order_check` and `vivado_constraint_diagnostics` to audit XDC fileset ordering, USED_IN scopes, and UG903/UG949 methodology markers before synthesis on non-trivial projects.
 15. Call `vivado_run_synthesis`.
 16. If synthesis succeeds, call `vivado_run_implementation`.
-17. Call `vivado_analyze_reports` for `timing_summary`, `utilization`, `drc`, `power`, and `methodology`.
+17. Call `vivado_analyze_reports` for `timing_summary`, `utilization`, `drc`, `power`, and `methodology`; use the returned issue IDs, evidence, and `official_doc_queries` to choose the next action.
 18. Use targeted `vivado_report` calls only after the aggregate analysis points at the next failure area.
 19. Summarize WNS/TNS, utilization pressure, DRC/methodology rule IDs, power totals, and the first actionable errors.
 
@@ -48,3 +48,6 @@ Use this for ordinary Project Mode FPGA work: create/open a project, add files, 
 - `nonproject_step_failed`: inspect the command artifact and requested reports from the failed Non-project step.
 - `hardware_discovery_failed`: inspect the warning rows from `vivado_hw_discover`, then verify hw_server URL, cable target, and UG908 Hardware Manager guidance.
 - `timing_failed`: call `vivado_analyze_reports`, then generate timing paths for the worst setup or hold failure.
+- `timing_unconstrained`: fix XDC clocks/order/scope before interpreting WNS/TNS.
+- `drc_io_constraint_missing`: resolve `drc.io_standard_missing` or `drc.io_pin_unconstrained` before bitstream generation.
+- `power_thermal_risk`: inspect power activity assumptions, thermal margin, and UG907 guidance before closure decisions.

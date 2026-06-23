@@ -226,7 +226,7 @@ def help_topic(topic: str | None = None) -> dict[str, object]:
     if normalized in {"report", "reports", "timing", "timing-closure", "utilization", "drc", "power", "methodology"}:
         return {
             "topic": "report_diagnostics",
-            "summary": "Generate common Vivado reports and analyze timing, utilization, DRC, power, and methodology findings before choosing the next closure action.",
+            "summary": "Generate common Vivado reports and classify timing, utilization, DRC, power, and methodology findings into issue IDs with evidence, next steps, and official-doc queries.",
             "recommended_tools": [
                 "vivado_analyze_reports",
                 "vivado_report",
