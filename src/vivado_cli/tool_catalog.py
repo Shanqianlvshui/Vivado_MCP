@@ -1,0 +1,397 @@
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+
+
+@dataclass(frozen=True)
+class ToolInfo:
+    command: str
+    tool_id: str
+    title: str
+    summary: str
+    status: str
+    requires_session: bool
+    mutates_vivado_state: bool
+    requires_expect_destructive: bool
+    risk_level: str
+    related_skills: tuple[str, ...]
+    example: str
+
+
+TOOLS: tuple[ToolInfo, ...] = (
+    ToolInfo(
+        command="check-installation",
+        tool_id="vivado_check_installation",
+        title="Check Vivado Installation",
+        summary="Locate Vivado and return the installed version.",
+        status="implemented",
+        requires_session=False,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("gui-session",),
+        example="vivado-cli check-installation",
+    ),
+    ToolInfo(
+        command="session start",
+        tool_id="vivado_start_session",
+        title="Start Session",
+        summary="Start a persistent Vivado Tcl or GUI session backed by a file queue.",
+        status="implemented",
+        requires_session=False,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="starts_process",
+        related_skills=("gui-session",),
+        example="vivado-cli session start --vivado-path C:\\Xilinx\\Vivado\\2023.1\\bin\\vivado.bat",
+    ),
+    ToolInfo(
+        command="session adopt",
+        tool_id="vivado_adopt_session",
+        title="Adopt Session",
+        summary="Register an existing file-backed Vivado bridge session under the CLI workspace.",
+        status="implemented",
+        requires_session=False,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("gui-session",),
+        example="vivado-cli session adopt --session-dir C:\\path\\to\\session --pid 1234 --session-ref live",
+    ),
+    ToolInfo(
+        command="session list",
+        tool_id="vivado_list_sessions",
+        title="List Sessions",
+        summary="List known CLI sessions in the selected workspace.",
+        status="implemented",
+        requires_session=False,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("gui-session",),
+        example="vivado-cli session list",
+    ),
+    ToolInfo(
+        command="session state",
+        tool_id="vivado_session_state",
+        title="Session State",
+        summary="Show process, bridge, GUI, and project metadata for one session.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("gui-session",),
+        example="vivado-cli session state --session live",
+    ),
+    ToolInfo(
+        command="session open-project",
+        tool_id="vivado_open_project",
+        title="Open Project",
+        summary="Open a Vivado .xpr inside an existing managed session.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=True,
+        requires_expect_destructive=False,
+        risk_level="project_mutation",
+        related_skills=("project-build-flow", "gui-session"),
+        example="vivado-cli session open-project --session live C:\\workspace\\demo.xpr",
+    ),
+    ToolInfo(
+        command="session run-tcl",
+        tool_id="vivado_run_tcl",
+        title="Run Tcl",
+        summary="Run inline Tcl text in an existing session after optional destructive-risk acknowledgement.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=True,
+        requires_expect_destructive=False,
+        risk_level="expert_tcl",
+        related_skills=("raw-tcl-expert",),
+        example='Write-Output "return [version -short]" | vivado-cli session run-tcl --session live --stdin',
+    ),
+    ToolInfo(
+        command="session source-tcl",
+        tool_id="vivado_source_tcl",
+        title="Source Tcl",
+        summary="Source a Tcl file inside Vivado with optional Tcl argv values.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=True,
+        requires_expect_destructive=False,
+        risk_level="expert_tcl",
+        related_skills=("raw-tcl-expert",),
+        example="vivado-cli session source-tcl --session live .\\script.tcl",
+    ),
+    ToolInfo(
+        command="tcl review",
+        tool_id="vivado_review_tcl",
+        title="Review Tcl",
+        summary="Review Tcl text for destructive, reset, hardware, and shell-exec risks before execution.",
+        status="implemented",
+        requires_session=False,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("raw-tcl-expert",),
+        example="vivado-cli tcl review .\\script.tcl",
+    ),
+    ToolInfo(
+        command="tcl help",
+        tool_id="vivado_tcl_command_help",
+        title="Tcl Command Help",
+        summary="Return structured guidance for a Vivado Tcl command, including official-doc search, structured-command coverage, and optional installed Vivado help.",
+        status="implemented",
+        requires_session=False,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("official-docs-reference", "raw-tcl-expert"),
+        example="vivado-cli tcl help create_clock",
+    ),
+    ToolInfo(
+        command="bd summary",
+        tool_id="vivado_bd_summary",
+        title="BD Summary",
+        summary="Write and parse a block-design summary artifact, optionally validating the design.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("block-design-flow",),
+        example="vivado-cli bd summary --session live --validate",
+    ),
+    ToolInfo(
+        command="bd validate",
+        tool_id="vivado_bd_validate",
+        title="BD Validate",
+        summary="Run validate_bd_design and parse issues; optional save mutates the BD.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=True,
+        requires_expect_destructive=False,
+        risk_level="project_mutation",
+        related_skills=("block-design-flow",),
+        example="vivado-cli bd validate --session live",
+    ),
+    ToolInfo(
+        command="hw list-debug-cores",
+        tool_id="vivado_hw_list_debug_cores",
+        title="HW List Debug Cores",
+        summary="List live hardware ILA/VIO debug cores and probe names for later capture or VIO-backed reads.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="hardware_access",
+        related_skills=("hardware-debug-flow", "gui-session", "raw-tcl-expert"),
+        example="vivado-cli hw list-debug-cores --session live --expect-hardware-access",
+    ),
+    ToolInfo(
+        command="hw vio-read",
+        tool_id="vivado_hw_vio_read",
+        title="HW VIO Read",
+        summary="Read current VIO probe values without changing VIO output probes.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="hardware_access",
+        related_skills=("hardware-debug-flow", "gui-session", "raw-tcl-expert"),
+        example="vivado-cli hw vio-read --session live --vio hw_vio_0 --probe chip_config/spi_read_status --expect-hardware-access",
+    ),
+    ToolInfo(
+        command="hw vio-write",
+        tool_id="vivado_hw_vio_write",
+        title="HW VIO Write",
+        summary="Write VIO output probes with explicit hardware-access and VIO-write acknowledgement.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=True,
+        requires_expect_destructive=False,
+        risk_level="hardware_write",
+        related_skills=("hardware-debug-flow", "gui-session", "raw-tcl-expert"),
+        example="vivado-cli hw vio-write --session live --vio hw_vio_0 --set reset_n=1 --expect-hardware-access --expect-vio-write",
+    ),
+    ToolInfo(
+        command="hw capture-ila",
+        tool_id="vivado_hw_capture_ila",
+        title="HW Capture ILA",
+        summary="Capture a live hardware ILA to a session artifact and optionally run project-agnostic CSV analysis.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="hardware_access",
+        related_skills=("hardware-debug-flow", "gui-session", "raw-tcl-expert"),
+        example="vivado-cli hw capture-ila --session live --ila hw_ila_0 --depth 1024 --analysis adc14 --expect-hardware-access",
+    ),
+    ToolInfo(
+        command="hw spi-read",
+        tool_id="vivado_hw_spi_read",
+        title="HW SPI Read",
+        summary="Read SPI-style registers through generic VIO probes and decode a configurable packed status word.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="hardware_access",
+        related_skills=("hardware-debug-flow", "gui-session", "raw-tcl-expert"),
+        example="vivado-cli hw spi-read --session live --vio hw_vio_0 --status-probe spi/status --req-probe spi/req --target-probe spi/target --addr-probe spi/addr --reg 2:0x0281 --expect-hardware-access",
+    ),
+    ToolInfo(
+        command="project summary",
+        tool_id="vivado_project_summary",
+        title="Project Summary",
+        summary="Write and parse current project, fileset, run, IP, and block-design state.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("project-build-flow",),
+        example="vivado-cli project summary --session live",
+    ),
+    ToolInfo(
+        command="run status",
+        tool_id="vivado_run_status",
+        title="Run Status",
+        summary="Read project run status and any locally launched run-script trackers without launching work.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("project-build-flow",),
+        example="vivado-cli run status --session live --run synth_1",
+    ),
+    ToolInfo(
+        command="run launch",
+        tool_id="vivado_run_launch",
+        title="Run Launch",
+        summary="Submit launch_runs without wait_on_run, optionally passing jobs and to_step.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=True,
+        requires_expect_destructive=False,
+        risk_level="starts_vivado_run",
+        related_skills=("project-build-flow",),
+        example="vivado-cli run launch --session live impl_1 --jobs 8",
+    ),
+    ToolInfo(
+        command="run launch-local",
+        tool_id="vivado_run_launch_local",
+        title="Run Launch Local",
+        summary="Start Vivado's generated local run script, preparing the script first when needed.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=True,
+        requires_expect_destructive=False,
+        risk_level="starts_process",
+        related_skills=("project-build-flow",),
+        example="vivado-cli run launch-local --session live impl_1 --jobs 8",
+    ),
+    ToolInfo(
+        command="run logs",
+        tool_id="vivado_run_logs",
+        title="Run Logs",
+        summary="Return a bounded tail of the latest local run log, runme.log, or another selected run log.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("project-build-flow",),
+        example="vivado-cli run logs --session live impl_1 --tail 120",
+    ),
+    ToolInfo(
+        command="run diagnose",
+        tool_id="vivado_run_diagnose",
+        title="Run Diagnose",
+        summary="Combine Vivado run properties and run-directory evidence to classify queued, failed, stale, and missing-DCP states.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="read_only",
+        related_skills=("project-build-flow",),
+        example="vivado-cli run diagnose --session live impl_1",
+    ),
+    ToolInfo(
+        command="run reset",
+        tool_id="vivado_run_reset",
+        title="Run Reset",
+        summary="Reset a Vivado run and discard run outputs; requires explicit destructive acknowledgement.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=True,
+        requires_expect_destructive=True,
+        risk_level="destructive",
+        related_skills=("project-build-flow", "raw-tcl-expert"),
+        example="vivado-cli run reset --session live impl_1 --expect-destructive",
+    ),
+    ToolInfo(
+        command="report",
+        tool_id="vivado_report",
+        title="Report",
+        summary="Generate one Vivado report, store it as an artifact, and return a best-effort parsed summary.",
+        status="implemented",
+        requires_session=True,
+        mutates_vivado_state=False,
+        requires_expect_destructive=False,
+        risk_level="artifact_producing",
+        related_skills=("project-build-flow", "official-docs-reference"),
+        example="vivado-cli report --session live timing_summary",
+    ),
+)
+
+
+def list_tools(query: str | None = None) -> list[dict[str, object]]:
+    needle = (query or "").strip().lower()
+    rows = []
+    for tool in TOOLS:
+        row = _tool_row(tool)
+        haystack = " ".join(str(value) for value in row.values()).lower()
+        if needle and needle not in haystack:
+            continue
+        rows.append(row)
+    return rows
+
+
+def describe_tool(name: str) -> dict[str, object]:
+    normalized = _normalize_tool_name(name)
+    for tool in TOOLS:
+        if normalized in {_normalize_tool_name(tool.command), _normalize_tool_name(tool.tool_id)}:
+            row = _tool_row(tool)
+            row["details"] = {
+                "interface": "CLI command",
+                "output": "JSON object on stdout; structured errors on stderr with non-zero exit.",
+                "safety": _safety_guidance(tool),
+            }
+            return row
+    raise KeyError(f"Unknown CLI tool or command {name!r}")
+
+
+def _tool_row(tool: ToolInfo) -> dict[str, object]:
+    row = asdict(tool)
+    row["related_skills"] = list(tool.related_skills)
+    return row
+
+
+def _normalize_tool_name(name: str) -> str:
+    return " ".join(name.strip().lower().replace("_", "-").split())
+
+
+def _safety_guidance(tool: ToolInfo) -> str:
+    if tool.requires_expect_destructive:
+        return "Requires explicit --expect-destructive because it can discard generated outputs or project state."
+    if tool.risk_level == "expert_tcl":
+        return "Run `vivado-cli tcl review` first for unfamiliar or mutating Tcl."
+    if tool.risk_level == "hardware_write":
+        return "Changes live VIO output probes; pass --expect-hardware-access and --expect-vio-write, and verify probe names first."
+    if tool.risk_level == "hardware_access":
+        return "Touches live hw_server/device state; pass the command's hardware-access acknowledgement and avoid parallel hardware sessions."
+    if tool.mutates_vivado_state:
+        return "Mutates Vivado session or project state; capture summaries/diffs around nontrivial changes."
+    return "Read-only or artifact-producing command."
