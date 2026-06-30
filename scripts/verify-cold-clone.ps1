@@ -49,6 +49,8 @@ try {
     Assert-NativeSuccess "python -m pip install -e .[dev]"
 
     Write-Host "Running CLI smoke checks"
+    $env:PYTHONIOENCODING = "utf-8"
+
     & $vivadoCli --help | Out-Null
     Assert-NativeSuccess "vivado-cli --help"
     & $vivadoCli tools list | Out-Null
