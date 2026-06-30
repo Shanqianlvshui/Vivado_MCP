@@ -189,6 +189,75 @@ def test_cli_assist_next_does_not_treat_dead_session_project_as_open(capsys, mon
     assert payload["recommended_tools"][:2] == ["vivado-cli check-installation", "vivado-cli session start"]
 
 
+def test_cli_session_artifacts_timeline_read_and_recovery_from_files(tmp_path: Path, capsys) -> None:
+    workspace = tmp_path / "workspace"
+    session_ref = "saved"
+    session_dir = workspace / ".vivado_cli" / "sessions" / session_ref
+    for child in ("running", "done", "reports", "summaries", "snapshots", "analyses"):
+        (session_dir / child).mkdir(parents=True, exist_ok=True)
+    record = cli_core.CliSessionRecord(
+        session_ref=session_ref,
+        session_dir=session_dir,
+        workspace_dir=workspace,
+        vivado_path=Path("C:/Xilinx/Vivado/2023.1/bin/vivado.bat"),
+        open_gui=True,
+        capability_profile="trusted-local",
+        process_pid=os.getpid(),
+        log_path=session_dir / "process.log",
+        current_project_path=workspace / "demo.xpr",
+    )
+    cli_core._write_record(record)
+    (session_dir / "running" / "001.tcl").write_text("return ok\n", encoding="utf-8")
+    (session_dir / "done" / "001.result.txt").write_text("code=0\nresult=ok\n", encoding="utf-8")
+    (session_dir / "reports" / "timing_summary_demo.rpt").write_text("Timing summary\nWNS(ns): -0.100\n", encoding="utf-8")
+    (session_dir / "summaries" / "project_summary_demo.tsv").write_text("current_project\tdemo\n", encoding="utf-8")
+    (session_dir / "snapshots" / "state_demo.json").write_text(
+        json.dumps({"snapshot": {"id": "state_demo"}, "project": {"current_project": "demo"}, "errors": []}),
+        encoding="utf-8",
+    )
+    (session_dir / "analyses" / "report_analysis_demo.json").write_text(
+        json.dumps(
+            {
+                "analysis": {
+                    "issues": [{"issue_id": "timing.wns_negative"}],
+                    "quality_gates": {"timing": "fail"},
+                    "next_action_plan": [{"tool": "vivado_constraint_diagnostics", "why": "Check constraints first."}],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    code = cli.main(["--workspace", str(workspace), "session", "artifacts", "--session", session_ref, "--kind", "report"])
+    assert code == 0
+    artifacts = json.loads(capsys.readouterr().out)
+    assert artifacts["count"] == 1
+    assert artifacts["artifacts"][0]["report_type"] == "timing_summary"
+    assert artifacts["artifacts"][0]["tool_hint"] == "vivado-cli report"
+
+    code = cli.main(["--workspace", str(workspace), "session", "timeline", "--session", session_ref])
+    assert code == 0
+    timeline = json.loads(capsys.readouterr().out)
+    assert timeline["count"] >= 6
+    assert {"command", "result", "report", "summary", "snapshot", "analysis"} <= set(timeline["counts"])
+
+    report_uri = artifacts["artifacts"][0]["artifact_uri"]
+    code = cli.main(["--workspace", str(workspace), "session", "read-artifact", "--session", session_ref, report_uri, "--max-chars", "12"])
+    assert code == 0
+    read = json.loads(capsys.readouterr().out)
+    assert read["kind"] == "report"
+    assert read["truncated"] is True
+    assert read["text"].startswith("Timing")
+
+    code = cli.main(["--workspace", str(workspace), "session", "recovery", "--session", session_ref])
+    assert code == 0
+    recovery = json.loads(capsys.readouterr().out)
+    assert recovery["summary"]["report_analysis_issue_count"] == 1
+    assert recovery["quality_gates"]["timing"] == "fail"
+    assert recovery["next_action_plan"][0]["tool"] == "vivado-cli constraint diagnostics"
+    assert "vivado-cli session timeline" in [row["tool"] for row in recovery["recommendations"]]
+
+
 def test_cli_tools_list_and_describe(capsys) -> None:
     code = cli.main(["tools", "list", "--query", "launch-local"])
 
@@ -247,6 +316,17 @@ def test_cli_tools_list_and_describe(capsys) -> None:
     xdc_tool = json.loads(capsys.readouterr().out)["tool"]
     assert xdc_tool["tool_id"] == "vivado_xdc_order_check"
     assert xdc_tool["risk_level"] == "read_only"
+
+    code = cli.main(["tools", "list", "--query", "session recovery"])
+    assert code == 0
+    recovery_tools = json.loads(capsys.readouterr().out)
+    assert [tool["command"] for tool in recovery_tools["tools"]] == ["session recovery"]
+
+    code = cli.main(["tools", "describe", "session", "read-artifact"])
+    assert code == 0
+    artifact_tool = json.loads(capsys.readouterr().out)["tool"]
+    assert artifact_tool["tool_id"] == "vivado_session_read_artifact"
+    assert artifact_tool["risk_level"] == "read_only"
 
     code = cli.main(["tools", "list", "--query", "assist"])
     assert code == 0

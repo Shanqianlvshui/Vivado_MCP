@@ -247,6 +247,10 @@ def help_topic(topic: str | None = None) -> dict[str, object]:
             "summary": "Recover long-running Vivado work by reading the session timeline, latest analyses, snapshots, summaries, reports, checkpoints, and next-action plan.",
             "recommended_tools": [
                 "vivado-cli assist next",
+                "vivado-cli session recovery",
+                "vivado-cli session timeline",
+                "vivado-cli session artifacts",
+                "vivado-cli session read-artifact",
                 "vivado-cli session list",
                 "vivado-cli session state",
                 "vivado-cli project summary",

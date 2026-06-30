@@ -78,6 +78,31 @@ def build_parser() -> argparse.ArgumentParser:
     _add_session_arg(state)
     state.set_defaults(func=_cmd_session_state)
 
+    artifacts = session_sub.add_parser("artifacts", help="List session artifacts for recovery and handoff.")
+    _add_session_arg(artifacts)
+    artifacts.add_argument("--kind", help="Filter by artifact kind, e.g. report, summary, snapshot, command, result.")
+    artifacts.add_argument("--report-type", help="Filter report artifacts by report type, e.g. timing_summary.")
+    artifacts.add_argument("--limit", type=int, help="Return only the latest N matching artifacts.")
+    artifacts.add_argument("--public-only", action="store_true", help="Hide internal command/result artifacts.")
+    artifacts.set_defaults(func=_cmd_session_artifacts)
+
+    timeline = session_sub.add_parser("timeline", help="Show chronological session artifact history.")
+    _add_session_arg(timeline)
+    timeline.add_argument("--kind", help="Filter by artifact kind, e.g. report, summary, snapshot, command, result.")
+    timeline.add_argument("--limit", type=int, help="Return only the latest N events.")
+    timeline.set_defaults(func=_cmd_session_timeline)
+
+    read_artifact = session_sub.add_parser("read-artifact", help="Read a text artifact by artifact id or vivado:// URI.")
+    _add_session_arg(read_artifact)
+    read_artifact.add_argument("artifact_id", help="Artifact id such as reports/timing.rpt or a vivado:// artifact URI.")
+    read_artifact.add_argument("--max-chars", type=int, default=20000, help="Maximum text characters to return.")
+    read_artifact.set_defaults(func=_cmd_session_read_artifact)
+
+    recovery = session_sub.add_parser("recovery", help="Build an AI-friendly recovery brief from session artifacts.")
+    _add_session_arg(recovery)
+    recovery.add_argument("--limit", type=int, default=10, help="Number of latest timeline events to include in the preview.")
+    recovery.set_defaults(func=_cmd_session_recovery)
+
     stop = session_sub.add_parser("stop", help="Stop a persistent Vivado session.")
     _add_session_arg(stop)
     stop.add_argument("--force", action="store_true")
@@ -468,6 +493,43 @@ def _cmd_session_list(args: argparse.Namespace) -> dict[str, object]:
 
 def _cmd_session_state(args: argparse.Namespace) -> dict[str, object]:
     return cli_core.session_state(workspace=args.workspace, session_ref=args.session)
+
+
+def _cmd_session_artifacts(args: argparse.Namespace) -> dict[str, object]:
+    return cli_core.session_artifacts(
+        workspace=args.workspace,
+        session_ref=args.session,
+        kind=args.kind,
+        report_type=args.report_type,
+        limit=args.limit,
+        include_internal=not args.public_only,
+    )
+
+
+def _cmd_session_timeline(args: argparse.Namespace) -> dict[str, object]:
+    return cli_core.session_timeline(
+        workspace=args.workspace,
+        session_ref=args.session,
+        kind=args.kind,
+        limit=args.limit,
+    )
+
+
+def _cmd_session_read_artifact(args: argparse.Namespace) -> dict[str, object]:
+    return cli_core.read_artifact(
+        workspace=args.workspace,
+        session_ref=args.session,
+        artifact_id=args.artifact_id,
+        max_chars=args.max_chars,
+    )
+
+
+def _cmd_session_recovery(args: argparse.Namespace) -> dict[str, object]:
+    return cli_core.session_recovery(
+        workspace=args.workspace,
+        session_ref=args.session,
+        limit=args.limit,
+    )
 
 
 def _cmd_session_stop(args: argparse.Namespace) -> dict[str, object]:

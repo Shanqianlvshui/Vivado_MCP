@@ -92,6 +92,10 @@ def test_help_topic_points_to_skill() -> None:
     assert "vivado://official-docs/index" in report_help["related_resources"]
 
     recovery_help = help_topic("recovery")
+    assert "vivado-cli session recovery" in recovery_help["recommended_tools"]
+    assert "vivado-cli session timeline" in recovery_help["recommended_tools"]
+    assert "vivado-cli session artifacts" in recovery_help["recommended_tools"]
+    assert "vivado-cli session read-artifact" in recovery_help["recommended_tools"]
     assert "vivado-cli session list" in recovery_help["recommended_tools"]
     assert "vivado-cli run logs" in recovery_help["recommended_tools"]
 

@@ -135,6 +135,23 @@ vivado-cli check-installation --vivado-path C:\Xilinx\Vivado\2023.1\bin\vivado.b
 vivado-cli --workspace C:\Workspace\Vivado_mcp session start `
   --vivado-path C:\Xilinx\Vivado\2023.1\bin\vivado.bat
 
+vivado-cli --workspace C:\Workspace\Vivado_mcp session recovery `
+  --session <session_ref>
+
+vivado-cli --workspace C:\Workspace\Vivado_mcp session timeline `
+  --session <session_ref> `
+  --limit 20
+
+vivado-cli --workspace C:\Workspace\Vivado_mcp session artifacts `
+  --session <session_ref> `
+  --kind report `
+  --limit 10
+
+vivado-cli --workspace C:\Workspace\Vivado_mcp session read-artifact `
+  --session <session_ref> `
+  reports\timing_summary.rpt `
+  --max-chars 12000
+
 vivado-cli --workspace C:\Workspace\Vivado_mcp session open-project `
   --session <session_ref> `
   C:\Workspace\Vivado\XCZU19EG\XCZU19EG_TEST\projects\qt7331_adda_2023.1\qt7331_adda_2023.1.xpr
@@ -240,7 +257,8 @@ CLI callers should use this order:
 5. Use `vivado-cli tcl review` before raw expert Tcl, then `vivado-cli session run-tcl` or `vivado-cli session source-tcl` only when no structured command covers the task.
 6. Pass explicit acknowledgements for risky actions, such as `--expect-destructive`, `--expect-hardware-access`, and `--expect-vio-write`.
 7. Read `state_tracking` and `state_diff` from mutating fileset/constraint commands before launching long runs or handing the session to another agent.
-8. After mutating project state, refresh with `vivado-cli project summary`, `vivado-cli fileset describe`, `vivado-cli constraint check-order`, `vivado-cli bd summary`, or `vivado-cli run diagnose` as appropriate.
+8. For a resumed or stale thread, run `vivado-cli session recovery`, then inspect `session timeline`, `session artifacts`, or `session read-artifact` before changing Vivado state.
+9. After mutating project state, refresh with `vivado-cli project summary`, `vivado-cli fileset describe`, `vivado-cli constraint check-order`, `vivado-cli bd summary`, or `vivado-cli run diagnose` as appropriate.
 
 ## First Manual Test
 
@@ -263,7 +281,7 @@ Use `vivado-cli tools list` as the source of truth. The current top-level
 groups are:
 
 - `check-installation`
-- `session start|adopt|list|state|open-project|run-tcl|source-tcl|stop`
+- `session start|adopt|list|state|artifacts|timeline|read-artifact|recovery|open-project|run-tcl|source-tcl|stop`
 - `tcl help|review`
 - `skills list|get`
 - `help topic`
@@ -295,6 +313,12 @@ Command files, result files, logs, and reports are stored under the managed sess
 ```text
 vivado://sessions/{session_ref}/artifacts/{artifact_id}
 ```
+
+Use `vivado-cli session artifacts --session <session_ref>` to list artifact IDs
+and `vivado-cli session read-artifact --session <session_ref> <artifact_id>` to
+read a bounded text slice. `vivado-cli session recovery --session <session_ref>`
+returns the latest analyses, snapshots, quality gates, timeline preview, and
+next CLI actions for AI handoff and long-running task recovery.
 
 Commands that generate reports, summaries, captures, snapshots, or diffs return
 filesystem paths and `vivado://...` artifact URIs in their JSON output.
